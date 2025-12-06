@@ -49,9 +49,9 @@ public class TurretController {
 
 
     // PID & control gains (from your tuned values)
-    private static final double TURRET_KP = 0.15;
+    private static final double TURRET_KP = 0.2;//0.15
     private static final double TURRET_KI = 0.0005;
-    private static final double TURRET_KD = 0.10;
+    private static final double TURRET_KD = 0.15;//0.10
     private static final double TURRET_MAX_POWER = 1.0;
 
     // Feedforward and smoothing/filtering
@@ -291,10 +291,10 @@ public class TurretController {
 
     private void publishTelemetry() {
         if (telemetry == null) return;
-        telemetry.addData("turret.desired", lastDesiredTicks);
-        telemetry.addData("turret.error", lastErrorReported);
-        telemetry.addData("turret.pid", String.format("%.4f", lastPidOut));
-        telemetry.addData("turret.ff", String.format("%.4f", lastFf));
-        telemetry.addData("turret.applied", String.format("%.4f", lastAppliedPower));
+//        telemetry.addData("turret.desired", lastDesiredTicks);
+//        telemetry.addData("turret.error", lastErrorReported);
+//        telemetry.addData("turret.pid", String.format("%.4f", lastPidOut));
+//        telemetry.addData("turret.ff", String.format("%.4f", lastFf));
+//        telemetry.addData("turret.applied", String.format("%.4f", lastAppliedPower));
     }
 }

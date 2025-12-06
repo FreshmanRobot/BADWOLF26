@@ -464,9 +464,9 @@ public class experimentalHORS extends LinearOpMode {
                 lastDerivative = derivativeFiltered;
 
                 telemetry.addData("turret.desired", desiredTicks);
-                telemetry.addData("turret.error", errorTicks);
-                telemetry.addData("turret.pid", String.format("%.3f", pidOut));
-                telemetry.addData("turret.ff", String.format("%.3f", ff));
+//                telemetry.addData("turret.error", errorTicks);
+//                telemetry.addData("turret.pid", String.format("%.3f", pidOut));
+//                telemetry.addData("turret.ff", String.format("%.3f", ff));
                 telemetry.addData("turret.applied", String.format("%.3f", applied));
             }
 
@@ -547,7 +547,7 @@ public class experimentalHORS extends LinearOpMode {
             // summary telemetry
             telemetry.addData("Mode", isFarMode ? "FAR" : "CLOSE");
             telemetry.addData("Turret Enc", turret.getCurrentPosition());
-            telemetry.addData("Turret Power", lastAppliedTurretPower);
+//            telemetry.addData("Turret Power", lastAppliedTurretPower);
             telemetry.update();
         }
     }

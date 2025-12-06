@@ -133,12 +133,12 @@ public class Flywheel {
 
         // telemetry
         if (telemetry != null) {
-            telemetry.addData("fly.currentRPM", String.format("%.1f", currentRPM));
-            telemetry.addData("fly.targetRPM", String.format("%.1f", targetRPM));
-            telemetry.addData("fly.power", String.format("%.3f", lastAppliedPower));
-            telemetry.addData("fly.scale", String.format("%.3f", rpmScale));
-            telemetry.addData("fly.tolerance", String.format("%.2f", targetToleranceRpm));
-            telemetry.addData("fly.atTarget", atTargetNow);
+            telemetry.addData("fly.Current RPM/n", String.format("%.1f", currentRPM));
+            telemetry.addData("fly.targetRPM/n", String.format("%.1f", targetRPM));
+            telemetry.addData("fly.power/n", String.format("%.3f", lastAppliedPower));
+//            telemetry.addData("fly.scale", String.format("%.3f", rpmScale));
+//            telemetry.addData("fly.tolerance", String.format("%.2f", targetToleranceRpm));
+//            telemetry.addData("fly.atTarget", atTargetNow);
         }
     }
 
