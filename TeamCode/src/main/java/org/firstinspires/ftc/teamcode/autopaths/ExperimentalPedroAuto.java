@@ -117,7 +117,7 @@ public class ExperimentalPedroAuto extends OpMode {
         paths = new Paths(follower);
 
         // Set starting pose to the start point of Path1 (and heading to match interpolation start)
-        follower.setStartingPose(new Pose(20.706, 121.842, Math.toRadians(135)));
+        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
 
         // Timers & state
         intakeTimer = new Timer();
@@ -334,7 +334,7 @@ public class ExperimentalPedroAuto extends OpMode {
             Path1 = follower
                     .pathBuilder()
                     .addPath(
-                            new BezierLine(new Pose(20.706, 121.842), new Pose(48.000, 96.000))
+                            new BezierLine(new Pose(20, 122), new Pose(48.000, 96.000))
                     )
                     .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(130))
                     .build();
