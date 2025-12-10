@@ -6,16 +6,18 @@ import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
+import com.pedropathing.ftc.localization.constants.TwoWheelConstants;
 import com.pedropathing.paths.PathConstraints;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(11.8)
+            .mass(4.5)
             .forwardZeroPowerAcceleration(-36.47575519127562)
             .lateralZeroPowerAcceleration(-55.47828826172785)
             .translationalPIDFCoefficients(new PIDFCoefficients(0.08,0,0.0067,0.03))
@@ -43,20 +45,24 @@ public class Constants {
             .yVelocity(55.81917974517101);
 
     // ✅ Pinpoint localizer constants
-    public static PinpointConstants localizerConstants = new PinpointConstants()
-            .forwardPodY(-3.2)   // adjust based on your robot’s actual offset
-            .strafePodX(-5)   // adjust based on your robot’s actual offset
-            .distanceUnit(DistanceUnit.INCH)
-            .hardwareMapName("pinpoint")   // must match the name in your config
-            .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
-            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
-            .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+    public static TwoWheelConstants localizerConstants = new TwoWheelConstants()
+            .forwardEncoder_HardwareMapName("shooter")
+            .forwardEncoder_HardwareMapName("backRight")
+            .forwardPodY(-6)   // adjust based on your robot’s actual offset
+            .strafePodX(-2.5)   // adjust based on your robot’s actual offset
+            .IMU_HardwareMapName("imu")
+            .IMU_Orientation(
+                new RevHubOrientationOnRobot(
+                    RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                    RevHubOrientationOnRobot.UsbFacingDirection.LEFT
+                )
+                );
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)
                 .pathConstraints(pathConstraints)
                 .mecanumDrivetrain(driveConstants)     // ✅ attach drivetrain
-                .pinpointLocalizer(localizerConstants) // ✅ attach localizer
+                .twoWheelLocalizer(localizerConstants) // ✅ attach localizer
                 .build();
     }
 }
