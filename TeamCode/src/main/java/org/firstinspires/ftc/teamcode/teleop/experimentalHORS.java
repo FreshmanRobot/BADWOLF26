@@ -18,7 +18,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 
 
-// subsystem imports (adjust package paths if yours differ)
+//bruah
 import org.firstinspires.ftc.teamcode.subsystems.TurretController;
 import org.firstinspires.ftc.teamcode.subsystems.DriveController;
 import org.firstinspires.ftc.teamcode.subsystems.Flywheel;
@@ -36,7 +36,7 @@ public class experimentalHORS extends LinearOpMode {
     private DriveController driveController;
     private Flywheel flywheel;
 
-    // UI / debounce and other small state
+
     private boolean dpadDownLast = false;
     private boolean dpadLeftLast = false;
     private boolean dpadRightLast = false;
