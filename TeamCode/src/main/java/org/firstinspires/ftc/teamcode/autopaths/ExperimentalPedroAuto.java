@@ -20,20 +20,51 @@ import org.firstinspires.ftc.teamcode.subsystems.Flywheel;
 import org.firstinspires.ftc.teamcode.subsystems.TurretController;
 
 /**
- * ExperimentalPedroAuto (improved PRE_ACTION pose handling + fallback)
+ * ExperimentalPedroAuto — Autonomous with Pedro pathing and explicit pre-action + intake/claw sequencing.
  *
- * Fixes:
- *  - PRE_ACTION timer only begins after the robot reaches the shoot pose OR after a short pose-wait timeout.
- *  - Increased default pose tolerance and added debug telemetry for distance-to-target so you can tune.
- *  - Prevents the robot from stalling indefinitely when it gets "very close but not exact".
+ * Program:
+ *  - Creates a Pedro pathing follower and runs a sequence of 11 predefined bezier paths.
+ *  - Uses a simple FSM (AutoState) to progress: WAIT_FOR_SHOOTER -> RUNNING_PATH -> PRE_ACTION ->
+ *    INTAKE_RUN -> CLAW_ACTION -> (next path or FINISHED).
  *
- * Behavior preserved otherwise.
+ * PRE_ACTION behavior:
+ *  - Entered when a path finishes at the "shoot pose" (x=48, y=96). Paths 1, 4, 7 and 10 end at that pose.
+ *  - On entry, the OpMode waits for the robot to reach the shoot pose within a tolerance (START_POSE_TOLERANCE_IN = 6.0 inches).
+ *  - If the robot reaches the pose the PRE_ACTION timer is started. If the robot does not reach it within
+ *    PRE_ACTION_MAX_POSE_WAIT_SECONDS (0.3s) the PRE_ACTION timer is started anyway (fallback).
+ *  - After PRE_ACTION_WAIT_SECONDS (0.3s) elapses from timer start, the robot starts the intake and
+ *    transitions to INTAKE_RUN.
  *
- * Modifications:
- *  - When path 4, path 7 or path 10 starts, run intake for a timed 1.0s and then stop.
- *  - PRE_ACTION_WAIT_SECONDS reduced by 0.5s (from 0.8 to 0.3).
- *  - Turret remains present and tracked but is forced into manual 0 power mode each loop (no movement).
- *  - Shooter does NOT spin up during init(); it will be started in start().
+ * INTAKE_RUN behavior:
+ *  - Runs the intake/compression for INTAKE_RUN_SECONDS (default 2.5s).
+ *  - After the run-duration expires the intake is stopped (unless it's part of an ongoing intake-segment),
+ *    the claw is closed for CLAW_CLOSE_MS (250ms) then opened, and the FSM continues to the next path.
+ *
+ * Intake segments and timed intakes:
+ *  - Starting certain paths begins continuous intake for that path:
+ *      - Path 3 starts intake for the duration of Path 3 (stops when Path 3 finishes).
+ *      - Path 6 starts intake for the duration of Path 6.
+ *      - Path 9 starts intake for the duration of Path 9.
+ *    (This is tracked with intakeSegmentEnd.)
+ *  - Paths 4, 7 and 10 start a short, timed intake when they begin — the intake runs for TIMED_INTAKE_SECONDS (1.0s)
+ *    and is then stopped automatically. This is independent of the normal INTAKE_RUN sequence.
+ *
+ * Shooter & Turret:
+ *  - Shooter (Flywheel) subsystem is instantiated during init() but NOT spun up until start().
+ *  - On start(), the flywheel is enabled and given a close-range target RPM (AUTO_SHOOTER_RPM = 90.0).
+ *  - OpMode enters WAIT_FOR_SHOOTER and waits until flywheel reports on-target or a timeout elapses
+ *    (SHOOTER_WAIT_TIMEOUT_MS = 4000ms) before beginning Path1.
+ *  - TurretController is active and allowed to track (automatic mode) so turret tracking/motion is enabled.
+ *
+ * Timing constants used by the program (defaults shown):
+ *  - PRE_ACTION_WAIT_SECONDS = 0.3   (wait after reaching pose / fallback)
+ *  - PRE_ACTION_MAX_POSE_WAIT_SECONDS = 0.3 (pose-wait fallback)
+ *  - START_POSE_TOLERANCE_IN = 6.0 (in units of inches)
+ *  - INTAKE_RUN_SECONDS = 2.5
+ *  - TIMED_INTAKE_SECONDS = 1.0
+ *  - CLAW_CLOSE_MS = 250
+ *  - SHOOTER_WAIT_TIMEOUT_MS = 4000
+ *  - AUTO_SHOOTER_RPM = 90.0
  */
 @Autonomous(name = "Experimental Pedro Pathing Auto", group = "Autonomous")
 @Configurable
@@ -44,7 +75,7 @@ public class ExperimentalPedroAuto extends OpMode {
     private Paths paths;
 
     // State machine
-    private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_WAIT, CLAW_ACTION, FINISHED }
+    private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_RUN, CLAW_ACTION, FINISHED }
     private AutoState state = AutoState.IDLE;
 
     // current path index being run (1..11). 0 when none.
@@ -52,9 +83,9 @@ public class ExperimentalPedroAuto extends OpMode {
     // next path index to run after PRE_ACTION/CLAW sequences
     private int nextPathIndex = -1;
 
-    // Intake-wait state & timer
+    // Intake-run state & timer
     private Timer intakeTimer;
-    private static final double INTAKE_WAIT_SECONDS = 2.5; // change to shorten/lengthen intake duration
+    private static final double INTAKE_RUN_SECONDS = 2.5; // change to shorten/lengthen intake duration
 
     // Timed intake on-path start (for path4, path7 and path10)
     private Timer timedIntakeTimer;
@@ -116,8 +147,8 @@ public class ExperimentalPedroAuto extends OpMode {
     private static final double START_POSE_TOLERANCE_IN = 6.0; // increased tolerance to avoid tiny-miss stalls
 
     // Turret movement control flag (false = allow automatic movement; true = manual mode with 0 power)
-    // We will force manual=true in loop so turret does not move but controller still updates/reads sensors.
-    private final boolean turretForceManualNoMove = true;
+    // We will set this to false so turret tracking is enabled.
+    private final boolean turretForceManualNoMove = false;
 
     public ExperimentalPedroAuto() {}
 
@@ -231,10 +262,10 @@ public class ExperimentalPedroAuto extends OpMode {
         if (flywheel != null) {
             flywheel.update(System.currentTimeMillis(), false);
         }
-        // Keep turret controller state refreshed during init loop as well
+        // Keep turret controller state refreshed during init loop as well.
+        // Allow turret controller to run in automatic mode so tracking is active.
         if (turretController != null) {
-            // Keep in manual 0-power mode during init loop so it doesn't move
-            turretController.update(true, 0.0);
+            turretController.update(false, 0.0);
         }
     }
 
@@ -268,11 +299,9 @@ public class ExperimentalPedroAuto extends OpMode {
             flywheel.update(nowMs, false);
         }
 
-        // Turret: we keep the controller active so it continues to read sensors/encoders and update internal state,
-        // but we force manual mode with 0 power so it won't apply motion. This leaves the motor in BRAKE and
-        // preserves heading/position telemetry.
+        // Turret: enable tracking/automatic updates (allow turret to move/track)
         if (turretController != null) {
-            turretController.update(true, 0.0);
+            turretController.update(false, 0.0);
         }
 
         // Run the refined FSM
@@ -293,8 +322,7 @@ public class ExperimentalPedroAuto extends OpMode {
         if (turretMotor != null && turretController != null) {
             panelsTelemetry.debug("Turret Enc", turretMotor.getCurrentPosition());
             panelsTelemetry.debug("Turret Power", turretController.getLastAppliedPower());
-            // show that turret is forced manual/no-move
-            panelsTelemetry.debug("TurretManualNoMove", String.valueOf(turretForceManualNoMove));
+            panelsTelemetry.debug("TurretTrackingEnabled", String.valueOf(!turretForceManualNoMove));
         }
         if (intakeMotor != null) {
             panelsTelemetry.debug("Intake Power", intakeMotor.getPower());
@@ -318,8 +346,8 @@ public class ExperimentalPedroAuto extends OpMode {
             flywheel.update(System.currentTimeMillis(), false);
         }
         if (turretController != null) {
-            // manual with 0 power to ensure motor stops and stays braked
-            turretController.update(true, 0.0);
+            // leave turret controller in automatic mode but set 0 power as a safe stop command
+            turretController.update(false, 0.0);
         }
 
         // Ensure intake off and claw open
@@ -523,16 +551,16 @@ public class ExperimentalPedroAuto extends OpMode {
                 } else {
                     // PRE_ACTION timer started; wait required PRE_ACTION_WAIT_SECONDS from this moment
                     if (preActionTimer.getElapsedTimeSeconds() >= PRE_ACTION_WAIT_SECONDS) {
-                        // start intake for INTAKE_WAIT_SECONDS, then claw action will run
+                        // start intake for INTAKE_RUN_SECONDS, then claw action will run
                         startIntake();
                         intakeTimer.resetTimer();
-                        state = AutoState.INTAKE_WAIT;
+                        state = AutoState.INTAKE_RUN;
                     }
                 }
                 break;
 
-            case INTAKE_WAIT:
-                if (intakeTimer.getElapsedTimeSeconds() >= INTAKE_WAIT_SECONDS) {
+            case INTAKE_RUN:
+                if (intakeTimer.getElapsedTimeSeconds() >= INTAKE_RUN_SECONDS) {
                     // Stop intake only if it's not part of a longer intake-segment
                     if (intakeSegmentEnd == -1) {
                         stopIntake();
@@ -588,7 +616,8 @@ public class ExperimentalPedroAuto extends OpMode {
                     .addPath(
                             new BezierLine(new Pose(20.000, 122.000), new Pose(48.000, 96.000))
                     )
-                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(130))
+                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(135))
+                    .setVelocityConstraint(60)//remove if slow
                     .build();
 
             Path2 = follower
@@ -596,7 +625,7 @@ public class ExperimentalPedroAuto extends OpMode {
                     .addPath(
                             new BezierLine(new Pose(48.000, 96.000), new Pose(44.000, 84.000))
                     )
-                    .setLinearHeadingInterpolation(Math.toRadians(130), Math.toRadians(180))
+                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(180))
                     .build();
 
             Path3 = follower
@@ -612,7 +641,7 @@ public class ExperimentalPedroAuto extends OpMode {
                     .addPath(
                             new BezierLine(new Pose(24.000, 84.000), new Pose(48.000, 96.000))
                     )
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(130))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Path5 = follower
@@ -620,7 +649,7 @@ public class ExperimentalPedroAuto extends OpMode {
                     .addPath(
                             new BezierLine(new Pose(48.000, 96.000), new Pose(46.000, 57.000))
                     )
-                    .setLinearHeadingInterpolation(Math.toRadians(130), Math.toRadians(180))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Path6 = follower
@@ -636,7 +665,7 @@ public class ExperimentalPedroAuto extends OpMode {
                     .addPath(
                             new BezierLine(new Pose(15.000, 57.000), new Pose(48.000, 96.000))
                     )
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(130))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Path8 = follower
@@ -644,7 +673,7 @@ public class ExperimentalPedroAuto extends OpMode {
                     .addPath(
                             new BezierLine(new Pose(48.000, 96.000), new Pose(43.000, 36.000))
                     )
-                    .setLinearHeadingInterpolation(Math.toRadians(130), Math.toRadians(180))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Path9 = follower
@@ -660,7 +689,7 @@ public class ExperimentalPedroAuto extends OpMode {
                     .addPath(
                             new BezierLine(new Pose(16.000, 36.000), new Pose(48.000, 96.000))
                     )
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(130))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Path11 = follower
@@ -668,7 +697,7 @@ public class ExperimentalPedroAuto extends OpMode {
                     .addPath(
                             new BezierLine(new Pose(48.000, 96.000), new Pose(20.000, 122.000))
                     )
-                    .setLinearHeadingInterpolation(Math.toRadians(130), Math.toRadians(135))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(135))
                     .build();
         }
     }
