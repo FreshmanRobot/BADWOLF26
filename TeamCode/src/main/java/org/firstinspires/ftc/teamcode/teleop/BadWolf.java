@@ -75,7 +75,7 @@ public class BadWolf extends LinearOpMode {
 
         lastShooterPosition = shooter.getCurrentPosition();
         lastShooterTime = System.currentTimeMillis();
-        targetRPM = MAX_RPM;
+        targetRPM = 90;
         shooterOn = false;
         clawServo.setPosition(0.0);
 
