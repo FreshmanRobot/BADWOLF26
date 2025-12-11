@@ -27,7 +27,7 @@ public class BadWolf extends LinearOpMode {
     private double kP = 0.0003;
     private double emaAlpha = 0.15;
 
-    private double rpmScale = 1.0;
+    private double rpmScale = 0.75;
     private boolean yPressedLast = false;
 
     private boolean dpadDownLast = false;
