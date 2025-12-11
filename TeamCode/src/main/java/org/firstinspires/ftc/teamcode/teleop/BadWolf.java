@@ -79,6 +79,10 @@ public class BadWolf extends LinearOpMode {
         shooterOn = false;
         clawServo.setPosition(0.0);
 
+        // initial positions
+        clawServo.setPosition(0.63);
+        leftHoodServo.setPosition(leftHoodPosition);
+
         waitForStart();
 
         while (opModeIsActive()) {
@@ -145,6 +149,18 @@ public class BadWolf extends LinearOpMode {
             } else {
                 intakeMotor.setPower(0.0);
                 transferMotor.setPower(0.0);
+            }
+
+            // Hood adjustments
+            if (gamepad1.a && nowMs - lastLeftHoodAdjustMs >= HOOD_ADJUST_DEBOUNCE_MS) {
+                lastLeftHoodAdjustMs = nowMs;
+                leftHoodPosition = Math.min(0.45, leftHoodPosition + 0.025);
+                leftHoodServo.setPosition(leftHoodPosition);
+            }
+            if (gamepad1.b && nowMs - lastLeftHoodAdjustMs >= HOOD_ADJUST_DEBOUNCE_MS) {
+                lastLeftHoodAdjustMs = nowMs;
+                leftHoodPosition = Math.max(0.12, leftHoodPosition - 0.025);
+                leftHoodServo.setPosition(leftHoodPosition);
             }
 
             // RPM measurement
