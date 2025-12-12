@@ -52,7 +52,7 @@ public class experimentalHORS extends LinearOpMode {
 
     private int clawActionPhase = 0;
     private long clawActionStartMs = 0L;
-    private static final long CLAW_CLOSE_MS = 500L;
+    private static final long CLAW_CLOSE_MS = 1000L;
 
     // Far/Close mode
     private boolean isFarMode = false;

@@ -27,7 +27,7 @@ public class BadWolf extends LinearOpMode {
     private double kP = 0.0003;
     private double emaAlpha = 0.15;
 
-    private double rpmScale = 0.75;
+    private double rpmScale = 0.85;
     private boolean xPressedLast = false;
     private boolean yPressedLast = false;
     private int clawActionPhase = 0;
@@ -49,7 +49,7 @@ public class BadWolf extends LinearOpMode {
     private double leftHoodPosition = 0.12;
     private long lastLeftHoodAdjustMs = 0L;
     private static final long HOOD_ADJUST_DEBOUNCE_MS = 120L;
-    private static final long CLAW_CLOSE_MS = 1500L;
+    private static final long CLAW_CLOSE_MS = 500L;
 
     @Override
     public void runOpMode() {
@@ -83,7 +83,6 @@ public class BadWolf extends LinearOpMode {
         clawServo.setPosition(0.0);
 
         // initial positions
-        clawServo.setPosition(0.63);
         leftHoodServo.setPosition(leftHoodPosition);
 
         waitForStart();
