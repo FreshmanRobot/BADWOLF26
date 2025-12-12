@@ -12,7 +12,7 @@ public class BadWolf extends LinearOpMode {
     private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
     private DcMotor shooter, intakeMotor;
     private Servo clawServo=null;
-    private Servo hoodServo=null;
+    private Servo leftHoodServo=null;
     private CRServo transferMotor;   // NEW continuous servo
 
     // shooter control state
@@ -28,14 +28,16 @@ public class BadWolf extends LinearOpMode {
     private double emaAlpha = 0.15;
 
     private double rpmScale = 0.75;
+    private boolean xPressedLast = false;
     private boolean yPressedLast = false;
+    private int clawActionPhase = 0;
+    private long clawActionStartMs = 0L;
+
 
     private boolean dpadDownLast = false;
     private boolean dpadLeftLast = false;
     private boolean dpadRightLast = false;
     private boolean dpadUpLast = false;
-    private boolean xPressedLast = false;
-
     private boolean atTargetLast = false;
     private boolean rumbling = false;
     private long rumbleEndTimeMs = 0L;
@@ -44,7 +46,8 @@ public class BadWolf extends LinearOpMode {
 
     // hood/claw timing
     private double hoodPosition = 0;
-    private long lastHoodAdjustMs = 0L;
+    private double leftHoodPosition = 0.12;
+    private long lastLeftHoodAdjustMs = 0L;
     private static final long HOOD_ADJUST_DEBOUNCE_MS = 120L;
     private static final long CLAW_CLOSE_MS = 1500L;
 
@@ -58,7 +61,7 @@ public class BadWolf extends LinearOpMode {
         shooter = hardwareMap.get(DcMotor.class, "shooter");
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         clawServo = hardwareMap.get(Servo.class, "clawServo");
-        hoodServo = hardwareMap.get(Servo.class, "hoodServo");
+        leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
         transferMotor = hardwareMap.get(CRServo.class, "transfer"); // NEW mapping
         transferMotor.setDirection(CRServo.Direction.FORWARD);
 
@@ -204,10 +207,17 @@ public class BadWolf extends LinearOpMode {
             atTargetLast = atTargetNow;
             if (rumbling && nowMs > rumbleEndTimeMs) rumbling = false;
 
-            if (gamepad1.x || gamepad2.x) {
+            // CLAW toggle
+            boolean xNow = gamepad1.x || gamepad2.x;
+            if (xNow && !xPressedLast) {
                 clawServo.setPosition(1.0);
-            } else {
+                clawActionPhase = 1;
+                clawActionStartMs = nowMs;
+            }
+            xPressedLast = xNow;
+            if (clawActionPhase == 1 && nowMs >= clawActionStartMs + CLAW_CLOSE_MS) {
                 clawServo.setPosition(0.0);
+                clawActionPhase = 0;
             }
 
             // TELEMETRY
