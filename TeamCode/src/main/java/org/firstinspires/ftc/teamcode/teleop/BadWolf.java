@@ -27,7 +27,7 @@ public class BadWolf extends LinearOpMode {
     private double kP = 0.0003;
     private double emaAlpha = 0.15;
 
-    private double rpmScale = 0.85;
+    private double rpmScale = 0.75;
     private boolean xPressedLast = false;
     private boolean yPressedLast = false;
     private int clawActionPhase = 0;
@@ -108,6 +108,21 @@ public class BadWolf extends LinearOpMode {
             backLeftDrive.setPower(backLeftPower);
             frontRightDrive.setPower(frontRightPower);
             backRightDrive.setPower(backRightPower);
+
+
+            // Experimental Code (Switch to other keybinds)
+            if (gamepad1.a || gamepad2.a) {
+                frontLeftDrive.setPower(frontLeftPower * 0.5);
+                backLeftDrive.setPower(backLeftPower * 0.5);
+                frontRightDrive.setPower(frontRightPower * 0.5);
+                backRightDrive.setPower(backRightPower * 0.5);
+            }
+            if (gamepad1.b || gamepad2.b) {
+                frontLeftDrive.setPower(frontLeftPower);
+                backLeftDrive.setPower(backLeftPower);
+                frontRightDrive.setPower(frontRightPower);
+                backRightDrive.setPower(backRightPower);
+            }
 
             // DPAD shooter toggles
             boolean dpadDownNow = gamepad1.dpad_down || gamepad2.dpad_down;
