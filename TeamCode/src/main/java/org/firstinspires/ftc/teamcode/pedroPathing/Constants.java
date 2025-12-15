@@ -47,8 +47,8 @@ public class Constants {
 
     // ✅ Pinpoint localizer constants
     public static TwoWheelConstants localizerConstants = new TwoWheelConstants()
-            .forwardEncoder_HardwareMapName("frontLeft")
-            .strafeEncoder_HardwareMapName("backLeft")
+            .forwardEncoder_HardwareMapName("backLeft")
+            .strafeEncoder_HardwareMapName("frontLeft")
             .forwardEncoderDirection(Encoder.FORWARD)
             .strafeEncoderDirection(Encoder.REVERSE)
             .forwardTicksToInches(0.00303)
