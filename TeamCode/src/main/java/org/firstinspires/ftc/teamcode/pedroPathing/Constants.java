@@ -51,6 +51,8 @@ public class Constants {
             .strafeEncoder_HardwareMapName("frontRight")
             .forwardEncoderDirection(Encoder.FORWARD)
             .strafeEncoderDirection(Encoder.REVERSE)
+            .forwardTicksToInches(0.00303)
+            .strafeTicksToInches(-0.002945)
             .forwardPodY(-6)   // adjust based on your robot’s actual offset
             .strafePodX(-2.5)   // adjust based on your robot’s actual offset
             .IMU_HardwareMapName("imu")
