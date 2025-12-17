@@ -21,7 +21,7 @@ public class Constants {
             .mass(4.5)
             .forwardZeroPowerAcceleration(-52.425830770605764)
             .lateralZeroPowerAcceleration(-70.269834750347598)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.8,0.004,0.0067,0.03))
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.08,0.0,0.0067,0.033))
             .headingPIDFCoefficients(new PIDFCoefficients(0.8, 0, 0.03, 0.028))
             ;
 
@@ -47,19 +47,21 @@ public class Constants {
 
     // ✅ Pinpoint localizer constants
     public static TwoWheelConstants localizerConstants = new TwoWheelConstants()
-            .forwardEncoder_HardwareMapName("backLeft")
-            .strafeEncoder_HardwareMapName("frontLeft")
+            .forwardEncoder_HardwareMapName("frontLeft")
+            .strafeEncoder_HardwareMapName("backLeft")
             .forwardEncoderDirection(Encoder.FORWARD)
-            .strafeEncoderDirection(Encoder.REVERSE)
+            .strafeEncoderDirection(Encoder.FORWARD)
             .forwardTicksToInches(0.00303)
             .strafeTicksToInches(-0.002945)
-            .forwardPodY(-6)   // adjust based on your robot’s actual offset
-            .strafePodX(-2.5)   // adjust based on your robot’s actual offset
+            //.forwardPodY(5.2)    // adjust based on your robot’s actual offset
+            //.strafePodX(1.7)   // adjust based on your robot’s actual offset
+            .forwardPodY(6)    // adjust based on your robot’s actual offset
+            .strafePodX(-1)   // adjust based on your robot’s actual offset
             .IMU_HardwareMapName("imu")
             .IMU_Orientation(
                 new RevHubOrientationOnRobot(
-                    RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                    RevHubOrientationOnRobot.UsbFacingDirection.LEFT
+                    RevHubOrientationOnRobot.LogoFacingDirection.LEFT,
+                    RevHubOrientationOnRobot.UsbFacingDirection.UP
                 )
                 );
 
