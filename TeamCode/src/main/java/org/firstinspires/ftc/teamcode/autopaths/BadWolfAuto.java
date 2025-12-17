@@ -12,6 +12,7 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -92,18 +93,23 @@ public class BadWolfAuto extends OpMode {
 
     // Intake + compression hardware (from teleop)
     private DcMotor intakeMotor;
-    private Servo leftCompressionServo;
-    private Servo rightCompressionServo;
+    //private Servo leftCompressionServo;
+    //private Servo rightCompressionServo;
+    private CRServo transferMotor;   // NEW continuous servo
+
+
 
     // Claw servo
     private Servo clawServo;
 
     // Intake/compression "on" values (match teleop right-trigger behavior)
     private static final double INTAKE_ON_POWER = 1.0;
-    private static final double LEFT_COMPRESSION_ON = 1.0;
-    private static final double RIGHT_COMPRESSION_ON = 0.0;
-    private static final double LEFT_COMPRESSION_OFF = 0.5;
-    private static final double RIGHT_COMPRESSION_OFF = 0.5;
+    private static final double TRANSFER_ON = 1.0;
+    private static final double TRANSFER_OFF = 0.0;
+//    private static final double LEFT_COMPRESSION_ON = 1.0;
+//    private static final double RIGHT_COMPRESSION_ON = 0.0;
+//    private static final double LEFT_COMPRESSION_OFF = 0.5;
+//    private static final double RIGHT_COMPRESSION_OFF = 0.5;
 
     // Intake-segment tracking: when starting a multi-path intake segment (3, 6, 9),
     // set intakeSegmentEnd to the path index after which the intake should be stopped.
@@ -180,16 +186,21 @@ public class BadWolfAuto extends OpMode {
         // --- Intake & compression hardware (same names as teleop) ---
         try {
             intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
-            leftCompressionServo = hardwareMap.get(Servo.class, "leftCompressionServo");
-            rightCompressionServo = hardwareMap.get(Servo.class, "rightCompressionServo");
+            //leftCompressionServo = hardwareMap.get(Servo.class, "leftCompressionServo");
+            //rightCompressionServo = hardwareMap.get(Servo.class, "rightCompressionServo");
+            transferMotor = hardwareMap.get(CRServo.class, "transfer");
 
             // Direction per request
             intakeMotor.setDirection(DcMotor.Direction.REVERSE);
 
             // Set defaults (same as teleop off state)
             intakeMotor.setPower(0.0);
-            leftCompressionServo.setPosition(LEFT_COMPRESSION_OFF);
-            rightCompressionServo.setPosition(RIGHT_COMPRESSION_OFF);
+            //leftCompressionServo.setPosition(LEFT_COMPRESSION_OFF);
+            //rightCompressionServo.setPosition(RIGHT_COMPRESSION_OFF);
+
+            transferMotor.setDirection(CRServo.Direction.REVERSE);
+            transferMotor.setPower(TRANSFER_OFF);
+
         } catch (Exception e) {
             panelsTelemetry.debug("Init", "Intake/compression mapping failed: " + e.getMessage());
         }
@@ -264,8 +275,9 @@ public class BadWolfAuto extends OpMode {
 
         if (intakeMotor != null) {
             panelsTelemetry.debug("Intake Power", intakeMotor.getPower());
-            panelsTelemetry.debug("LeftCompPos", leftCompressionServo != null ? leftCompressionServo.getPosition() : -1);
-            panelsTelemetry.debug("RightCompPos", rightCompressionServo != null ? rightCompressionServo.getPosition() : -1);
+            //panelsTelemetry.debug("LeftCompPos", leftCompressionServo != null ? leftCompressionServo.getPosition() : -1);
+            //panelsTelemetry.debug("RightCompPos", rightCompressionServo != null ? rightCompressionServo.getPosition() : -1);
+            //panelsTelemetry.debug("Transfer Power?", transferMotor != null ? transferMotor.getPower() : -1);
         }
         if (clawServo != null) {
             panelsTelemetry.debug("ClawPos", clawServo.getPosition());
@@ -297,8 +309,9 @@ public class BadWolfAuto extends OpMode {
     private void startIntake() {
         try {
             if (intakeMotor != null) intakeMotor.setPower(INTAKE_ON_POWER);
-            if (leftCompressionServo != null) leftCompressionServo.setPosition(LEFT_COMPRESSION_ON);
-            if (rightCompressionServo != null) rightCompressionServo.setPosition(RIGHT_COMPRESSION_ON);
+            //if (leftCompressionServo != null) leftCompressionServo.setPosition(LEFT_COMPRESSION_ON);
+            //if (rightCompressionServo != null) rightCompressionServo.setPosition(RIGHT_COMPRESSION_ON);
+            if(transferMotor != null) transferMotor.setPower(TRANSFER_ON);
         } catch (Exception e) {
             panelsTelemetry.debug("Intake", "startIntake error: " + e.getMessage());
         }
@@ -307,8 +320,9 @@ public class BadWolfAuto extends OpMode {
     private void stopIntake() {
         try {
             if (intakeMotor != null) intakeMotor.setPower(0.0);
-            if (leftCompressionServo != null) leftCompressionServo.setPosition(LEFT_COMPRESSION_OFF);
-            if (rightCompressionServo != null) rightCompressionServo.setPosition(RIGHT_COMPRESSION_OFF);
+            //if (leftCompressionServo != null) leftCompressionServo.setPosition(LEFT_COMPRESSION_OFF);
+            //if (rightCompressionServo != null) rightCompressionServo.setPosition(RIGHT_COMPRESSION_OFF);
+            if (transferMotor != null) transferMotor.setPower(TRANSFER_OFF);
         } catch (Exception e) {
             panelsTelemetry.debug("Intake", "stopIntake error: " + e.getMessage());
         }
@@ -551,11 +565,11 @@ public class BadWolfAuto extends OpMode {
         private final Pose startPose   = new Pose(20, 122, Math.toRadians(135));
         private final Pose scorePose   = new Pose(36, 108, Math.toRadians(135));
         private final Pose goTo1Pose   = new Pose(56,84, Math.toRadians(180));
-        private final Pose pickup1Pose = new Pose(14, 84, Math.toRadians(0));
+        private final Pose pickup1Pose = new Pose(20, 84, Math.toRadians(0));
         private final Pose goTo2Pose   = new Pose(56,60, Math.toRadians(180));
-        private final Pose pickup2Pose = new Pose(14, 60, Math.toRadians(0));
+        private final Pose pickup2Pose = new Pose(20, 60, Math.toRadians(0));
         private final Pose goTo3Pose   = new Pose(56,36, Math.toRadians(180));
-        private final Pose pickup3Pose = new Pose(14, 36, Math.toRadians(0));
+        private final Pose pickup3Pose = new Pose(20, 36, Math.toRadians(0));
 
         public Paths(Follower follower) {
             Path1 = follower
