@@ -51,6 +51,13 @@ public class BadWolf extends LinearOpMode {
     private static final long HOOD_ADJUST_DEBOUNCE_MS = 120L;
     private static final long CLAW_CLOSE_MS = 500L;
 
+    // Speed updating
+    // precision driving / macro buttons
+    private double driveScale = 1.0;              // current drive scale (1.0 = normal)
+    private static final double PRECISION_SCALE = 0.25; // slow precision multiplier
+    private boolean leftBumperLast = false;
+    private boolean rightBumperLast = false;
+
     @Override
     public void runOpMode() {
 
@@ -78,7 +85,7 @@ public class BadWolf extends LinearOpMode {
 
         lastShooterPosition = shooter.getCurrentPosition();
         lastShooterTime = System.currentTimeMillis();
-        targetRPM = 90;
+        targetRPM = 120;
         shooterOn = false;
         clawServo.setPosition(0.0);
 
@@ -104,33 +111,24 @@ public class BadWolf extends LinearOpMode {
             double frontRightPower = (y - x - rx) / denominator;
             double backRightPower = (y + x - rx) / denominator;
 
-            frontLeftDrive.setPower(frontLeftPower);
-            backLeftDrive.setPower(backLeftPower);
-            frontRightDrive.setPower(frontRightPower);
-            backRightDrive.setPower(backRightPower);
-
-
-            // Experimental Code (Switch to other keybinds)
-            if (gamepad1.a || gamepad2.a) {
-                frontLeftDrive.setPower(frontLeftPower * 0.5);
-                backLeftDrive.setPower(backLeftPower * 0.5);
-                frontRightDrive.setPower(frontRightPower * 0.5);
-                backRightDrive.setPower(backRightPower * 0.5);
+            // Macro buttons: left bumper -> precision/slow mode, right bumper -> normal mode
+            boolean leftBumperNow = gamepad1.left_bumper || gamepad2.left_bumper;
+            if (leftBumperNow && !leftBumperLast) {
+                driveScale = PRECISION_SCALE;
             }
-            if (gamepad1.b || gamepad2.b) {
-                frontLeftDrive.setPower(frontLeftPower);
-                backLeftDrive.setPower(backLeftPower);
-                frontRightDrive.setPower(frontRightPower);
-                backRightDrive.setPower(backRightPower);
-            }
+            leftBumperLast = leftBumperNow;
 
-            // DPAD shooter toggles
-            boolean dpadDownNow = gamepad1.dpad_down || gamepad2.dpad_down;
-            if (dpadDownNow && !dpadDownLast) {
-                shooter.setDirection(DcMotor.Direction.FORWARD);
-                shooterOn = !shooterOn;
+            boolean rightBumperNow = gamepad1.right_bumper || gamepad2.right_bumper;
+            if (rightBumperNow && !rightBumperLast) {
+                driveScale = 1.0;
             }
-            dpadDownLast = dpadDownNow;
+            rightBumperLast = rightBumperNow;
+
+            frontLeftDrive.setPower(frontLeftPower * driveScale);
+            backLeftDrive.setPower(backLeftPower * driveScale);
+            frontRightDrive.setPower(frontRightPower * driveScale);
+            backRightDrive.setPower(backRightPower * driveScale);
+
 
             boolean dpadLeftNow = gamepad1.dpad_left || gamepad2.dpad_left;
             if (dpadLeftNow && !dpadLeftLast) targetRPM = Math.max(0.0, targetRPM - 10.0);
