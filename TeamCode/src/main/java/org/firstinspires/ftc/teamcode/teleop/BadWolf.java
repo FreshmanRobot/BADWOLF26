@@ -129,6 +129,12 @@ public class BadWolf extends LinearOpMode {
             frontRightDrive.setPower(frontRightPower * driveScale);
             backRightDrive.setPower(backRightPower * driveScale);
 
+            boolean dpadDownNow = gamepad1.dpad_down || gamepad2.dpad_down;
+            if (dpadDownNow && !dpadDownLast) {
+                shooter.setDirection(DcMotor.Direction.FORWARD);
+                shooterOn = !shooterOn;
+            }
+            dpadDownLast = dpadDownNow;
 
             boolean dpadLeftNow = gamepad1.dpad_left || gamepad2.dpad_left;
             if (dpadLeftNow && !dpadLeftLast) targetRPM = Math.max(0.0, targetRPM - 10.0);
