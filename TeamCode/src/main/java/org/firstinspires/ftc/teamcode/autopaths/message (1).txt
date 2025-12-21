@@ -1,0 +1,444 @@
+package org.firstinspires.ftc.teamcode.autopaths;
+
+import com.bylazar.configurables.annotations.Configurable;
+import com.bylazar.telemetry.PanelsTelemetry;
+import com.bylazar.telemetry.TelemetryManager;
+import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.BezierLine;
+import com.pedropathing.geometry.Pose;
+import com.pedropathing.paths.PathChain;
+import com.pedropathing.util.Timer;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
+
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+
+@Autonomous(name = "A BLUE 9 Ball 🔷", group = "Autonomous", preselectTeleOp = "???HORS???")
+@Configurable
+public class BlueSideAuto extends OpMode {
+
+    private TelemetryManager panelsTelemetry;
+    public Follower follower;
+    private Paths paths;
+
+    private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_RUN, CLAW_ACTION, FINISHED }
+    private AutoState state = AutoState.IDLE;
+
+    private int currentPathIndex = 0;
+    private int nextPathIndex = -1;
+
+    private Timer intakeTimer;
+    private static final double INTAKE_RUN_SECONDS = 2.5;
+
+    private Timer timedIntakeTimer;
+    private static final double TIMED_INTAKE_SECONDS = 1.0;
+    private boolean timedIntakeActive = false;
+
+    private long clawActionStartMs = 0L;
+    private static final long CLAW_CLOSE_MS = 250L;
+
+    private Timer preActionTimer;
+    private static final double PRE_ACTION_WAIT_SECONDS = 0.3;
+
+    private Timer poseWaitTimer;
+    private static final double PRE_ACTION_MAX_POSE_WAIT_SECONDS = 0.3;
+
+    private boolean preActionTimerStarted = false;
+    private boolean preActionEntered = false;
+
+    private long shooterWaitStartMs = -1;
+    private static final long SHOOTER_WAIT_TIMEOUT_MS = 4000L;
+    private static final long SHOOTER_MIN_SPINUP_MS = 500L;
+
+    // Hardware mapping
+    private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
+    private DcMotor shooterMotor;
+    private DcMotor intakeMotor;
+    private CRServo transferMotor;
+    private Servo clawServo;
+    private Servo leftHoodServo;
+
+    private boolean shooterOn = false;
+    private double targetRPM = 90.0;
+    private long lastShooterPosition = 0;
+    private long lastShooterTime = 0;
+
+    private static final double INTAKE_ON_POWER = 1.0;
+    private static final double TRANSFER_ON_POWER = 1.0;
+
+    private static final double CLAW_CLOSED = 0.0;
+    private static final double CLAW_OPEN = 0.63;
+
+    private static final double LEFT_HOOD_POSITION = 0.12;
+
+    private int intakeSegmentEnd = -1;
+
+    private static final double SHOOT_POSE_X = 48.0;
+    private static final double SHOOT_POSE_Y = 96.0;
+    private static final double START_POSE_TOLERANCE_IN = 6.0;
+
+    public BlueSideAuto() {}
+
+    @Override
+    public void init() {
+        panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
+
+        follower = Constants.createFollower(hardwareMap);
+        paths = new Paths(follower);
+        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
+
+        intakeTimer = new Timer();
+        timedIntakeTimer = new Timer();
+        preActionTimer = new Timer();
+        poseWaitTimer = new Timer();
+        nextPathIndex = -1;
+        intakeSegmentEnd = -1;
+        preActionTimerStarted = false;
+        preActionEntered = false;
+        timedIntakeActive = false;
+
+        try {
+            frontLeftDrive = hardwareMap.get(DcMotor.class, "frontLeft");
+            backLeftDrive = hardwareMap.get(DcMotor.class, "backLeft");
+            frontRightDrive = hardwareMap.get(DcMotor.class, "frontRight");
+            backRightDrive = hardwareMap.get(DcMotor.class, "backRight");
+
+            frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+            backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+            frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
+            backRightDrive.setDirection(DcMotor.Direction.REVERSE);
+        } catch (Exception e) {
+            panelsTelemetry.debug("Init", "Drive map fail: " + e.getMessage());
+        }
+
+        try {
+            shooterMotor = hardwareMap.get(DcMotor.class, "shooter");
+            shooterMotor.setDirection(DcMotor.Direction.FORWARD);
+            shooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            shooterOn = false;
+            targetRPM = 90.0;
+            lastShooterPosition = shooterMotor.getCurrentPosition();
+            lastShooterTime = System.currentTimeMillis();
+        } catch (Exception e) {
+            panelsTelemetry.debug("Init", "Shooter map fail: " + e.getMessage());
+        }
+
+        try {
+            intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
+            transferMotor = hardwareMap.get(CRServo.class, "transfer");
+            if (transferMotor != null) transferMotor.setDirection(CRServo.Direction.FORWARD);
+            if (intakeMotor != null) intakeMotor.setPower(0.0);
+            if (transferMotor != null) transferMotor.setPower(0.0);
+        } catch (Exception e) {
+            panelsTelemetry.debug("Init", "Intake/transfer map fail: " + e.getMessage());
+        }
+
+        try {
+            clawServo = hardwareMap.get(Servo.class, "clawServo");
+            if (clawServo != null) clawServo.setPosition(CLAW_CLOSED);
+        } catch (Exception e) {
+            panelsTelemetry.debug("Init", "Claw map fail: " + e.getMessage());
+        }
+
+        try {
+            leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
+            if (leftHoodServo != null) leftHoodServo.setPosition(LEFT_HOOD_POSITION);
+        } catch (Exception e) {
+            panelsTelemetry.debug("Init", "Hood map fail: " + e.getMessage());
+        }
+
+        panelsTelemetry.debug("Status", "Initialized");
+        panelsTelemetry.update(telemetry);
+    }
+
+    @Override
+    public void init_loop() {
+    }
+
+    @Override
+    public void start() {
+        if (shooterMotor != null) {
+            shooterMotor.setPower(1.0);
+            shooterOn = true;
+            shooterWaitStartMs = System.currentTimeMillis();
+        } else {
+            shooterWaitStartMs = System.currentTimeMillis();
+        }
+        state = AutoState.WAIT_FOR_SHOOTER;
+    }
+
+    @Override
+    public void loop() {
+        follower.update();
+        long nowMs = System.currentTimeMillis();
+
+        runStateMachine(nowMs);
+
+        panelsTelemetry.debug("State", state.name());
+        panelsTelemetry.debug("PathIdx", currentPathIndex);
+        panelsTelemetry.debug("X", follower.getPose().getX());
+        panelsTelemetry.debug("Y", follower.getPose().getY());
+        panelsTelemetry.debug("Heading", follower.getPose().getHeading());
+        if (shooterMotor != null) {
+            panelsTelemetry.debug("ShooterPower", shooterMotor.getPower());
+            panelsTelemetry.debug("ShooterOn", shooterOn);
+            panelsTelemetry.debug("TargetRPM", targetRPM);
+        }
+        if (intakeMotor != null) panelsTelemetry.debug("IntakePower", intakeMotor.getPower());
+        if (transferMotor != null) panelsTelemetry.debug("TransferPower", transferMotor.getPower());
+        if (clawServo != null) panelsTelemetry.debug("ClawPos", clawServo.getPosition());
+        if (leftHoodServo != null) panelsTelemetry.debug("LeftHoodPos", leftHoodServo.getPosition());
+        double dist = distanceToShootPose();
+        panelsTelemetry.debug("DistToShootPose", String.format("%.2f", dist));
+        panelsTelemetry.update(telemetry);
+    }
+
+    @Override
+    public void stop() {
+        if (shooterMotor != null) shooterMotor.setPower(0.0);
+        stopIntake();
+        if (clawServo != null) clawServo.setPosition(CLAW_OPEN);
+        state = AutoState.FINISHED;
+    }
+
+    private void startIntake() {
+        try {
+            if (intakeMotor != null) intakeMotor.setPower(INTAKE_ON_POWER);
+            if (transferMotor != null) transferMotor.setPower(TRANSFER_ON_POWER);
+        } catch (Exception e) {
+            panelsTelemetry.debug("Intake", "startIntake error: " + e.getMessage());
+        }
+    }
+
+    private void stopIntake() {
+        try {
+            if (intakeMotor != null) intakeMotor.setPower(0.0);
+            if (transferMotor != null) transferMotor.setPower(0.0);
+        } catch (Exception e) {
+            panelsTelemetry.debug("Intake", "stopIntake error: " + e.getMessage());
+        }
+    }
+
+    private boolean endsAtShoot(int pathIndex) {
+        return pathIndex == 1 || pathIndex == 4 || pathIndex == 7;
+    }
+
+    private double distanceToShootPose() {
+        try {
+            Pose p = follower.getPose();
+            double dx = p.getX() - SHOOT_POSE_X;
+            double dy = p.getY() - SHOOT_POSE_Y;
+            return Math.hypot(dx, dy);
+        } catch (Exception e) {
+            return Double.POSITIVE_INFINITY;
+        }
+    }
+
+    private void startPath(int idx) {
+        if (idx < 1 || idx > 7) {
+            currentPathIndex = 0;
+            state = AutoState.FINISHED;
+            return;
+        }
+
+        if (idx == 3) {
+            intakeSegmentEnd = 3;
+            startIntake();
+        } else if (idx == 6) {
+            intakeSegmentEnd = 6;
+            startIntake();
+        }
+
+        if (idx == 4 || idx == 7) {
+            startIntake();
+            timedIntakeTimer.resetTimer();
+            timedIntakeActive = true;
+            panelsTelemetry.debug("TimedIntake", "Started timed intake for path " + idx);
+        }
+
+        switch (idx) {
+            case 1: follower.followPath(paths.Path1); break;
+            case 2: follower.followPath(paths.Path2); break;
+            case 3: follower.followPath(paths.Path3); break;
+            case 4: follower.followPath(paths.Path4); break;
+            case 5: follower.followPath(paths.Path5); break;
+            case 6: follower.followPath(paths.Path6); break;
+            case 7: follower.followPath(paths.Path7); break;
+            default: break;
+        }
+
+        currentPathIndex = idx;
+        state = AutoState.RUNNING_PATH;
+    }
+
+    private void runStateMachine(long nowMs) {
+        if (timedIntakeActive) {
+            if (timedIntakeTimer.getElapsedTimeSeconds() >= TIMED_INTAKE_SECONDS) {
+                stopIntake();
+                timedIntakeActive = false;
+                intakeSegmentEnd = -1;
+                panelsTelemetry.debug("TimedIntake", "Timed intake ended after " + TIMED_INTAKE_SECONDS + "s");
+            } else {
+                panelsTelemetry.debug("TimedIntake",
+                        String.format("remaining=%.2fs", TIMED_INTAKE_SECONDS - timedIntakeTimer.getElapsedTimeSeconds()));
+            }
+        }
+
+        switch (state) {
+            case WAIT_FOR_SHOOTER:
+                long elapsed = (shooterWaitStartMs < 0) ? 0 : (nowMs - shooterWaitStartMs);
+                if (elapsed >= SHOOTER_MIN_SPINUP_MS || elapsed >= SHOOTER_WAIT_TIMEOUT_MS) {
+                    startPath(1);
+                }
+                break;
+
+            case RUNNING_PATH:
+                if (!follower.isBusy()) {
+                    int finished = currentPathIndex;
+                    if (intakeSegmentEnd == finished) {
+                        stopIntake();
+                        intakeSegmentEnd = -1;
+                    }
+
+                    if (endsAtShoot(finished)) {
+                        nextPathIndex = finished + 1;
+                        preActionTimerStarted = false;
+                        preActionEntered = false;
+                        state = AutoState.PRE_ACTION;
+                    } else {
+                        int next = finished + 1;
+                        if (next > 7) {
+                            state = AutoState.FINISHED;
+                        } else {
+                            startPath(next);
+                        }
+                    }
+                }
+                break;
+
+            case PRE_ACTION:
+                if (!preActionEntered) {
+                    poseWaitTimer.resetTimer();
+                    preActionTimerStarted = false;
+                    preActionEntered = true;
+                    panelsTelemetry.debug("PRE_ACTION", "Entered PRE_ACTION, starting pose-wait");
+                }
+
+                if (!preActionTimerStarted) {
+                    double dist = distanceToShootPose();
+                    if (dist <= START_POSE_TOLERANCE_IN) {
+                        preActionTimer.resetTimer();
+                        preActionTimerStarted = true;
+                        panelsTelemetry.debug("PRE_ACTION", "At pose: starting PRE_ACTION timer");
+                    } else if (poseWaitTimer.getElapsedTimeSeconds() >= PRE_ACTION_MAX_POSE_WAIT_SECONDS) {
+                        preActionTimer.resetTimer();
+                        preActionTimerStarted = true;
+                        panelsTelemetry.debug("PRE_ACTION", "Pose-wait timeout: starting PRE_ACTION timer anyway (dist=" + String.format("%.2f", dist) + ")");
+                    } else {
+                        panelsTelemetry.debug("PRE_ACTION", "Waiting for pose (dist=" + String.format("%.2f", dist) + ")");
+                    }
+                } else {
+                    if (preActionTimer.getElapsedTimeSeconds() >= PRE_ACTION_WAIT_SECONDS) {
+                        startIntake();
+                        intakeTimer.resetTimer();
+                        state = AutoState.INTAKE_RUN;
+                    }
+                }
+                break;
+
+            case INTAKE_RUN:
+                if (intakeTimer.getElapsedTimeSeconds() >= INTAKE_RUN_SECONDS) {
+                    if (intakeSegmentEnd == -1) {
+                        stopIntake();
+                    }
+                    if (shooterMotor != null) {
+                        shooterMotor.setPower(0.95);
+                    }
+                    if (clawServo != null) clawServo.setPosition(CLAW_CLOSED);
+                    clawActionStartMs = System.currentTimeMillis();
+                    state = AutoState.CLAW_ACTION;
+                }
+                break;
+
+            case CLAW_ACTION:
+                if (System.currentTimeMillis() >= clawActionStartMs + CLAW_CLOSE_MS) {
+                    if (clawServo != null) clawServo.setPosition(CLAW_OPEN);
+                    if (nextPathIndex > 0 && nextPathIndex <= 7) {
+                        startPath(nextPathIndex);
+                        nextPathIndex = -1;
+                    } else {
+                        state = AutoState.FINISHED;
+                    }
+                }
+                break;
+
+            case FINISHED:
+                break;
+
+            case IDLE:
+            default:
+                break;
+        }
+    }
+
+    public static class Paths {
+
+        public PathChain Path1;
+        public PathChain Path2;
+        public PathChain Path3;
+        public PathChain Path4;
+        public PathChain Path5;
+        public PathChain Path6;
+        public PathChain Path7;
+
+        public Paths(Follower follower) {
+            Path1 = follower
+                    .pathBuilder()
+                    .addPath(new BezierLine(new Pose(20.000, 122.000), new Pose(48.000, 96.000)))
+                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(135))
+                    .build();
+
+            Path2 = follower
+                    .pathBuilder()
+                    .addPath(new BezierLine(new Pose(48.000, 96.000), new Pose(44.000, 82.000)))
+                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(180))
+                    .build();
+
+            Path3 = follower
+                    .pathBuilder()
+                    .addPath(new BezierLine(new Pose(44.000, 82.000), new Pose(24.000, 82.000)))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    .build();
+
+            Path4 = follower
+                    .pathBuilder()
+                    .addPath(new BezierLine(new Pose(24.000, 82.000), new Pose(48.000, 96.000)))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    .build();
+
+            Path5 = follower
+                    .pathBuilder()
+                    .addPath(new BezierLine(new Pose(48.000, 96.000), new Pose(46.000, 57.000)))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    .build();
+
+            Path6 = follower
+                    .pathBuilder()
+                    .addPath(new BezierLine(new Pose(46.000, 57.000), new Pose(18.00, 57.000)))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    .build();
+
+            Path7 = follower
+                    .pathBuilder()
+                    .addPath(new BezierLine(new Pose(18.00, 57.000), new Pose(34.000, 70.000)))
+                    .setNoDeceleration()
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    .addPath(new BezierLine(new Pose(34.000, 70.000), new Pose(48.000, 96.000)))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    .build();
+        }
+    }
+}
