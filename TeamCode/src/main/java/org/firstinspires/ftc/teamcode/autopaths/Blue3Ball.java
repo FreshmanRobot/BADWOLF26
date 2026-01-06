@@ -53,8 +53,8 @@ public class Blue3Ball extends LinearOpMode {
     private double emaAlpha = 0.20;      // smoothing for telemetry RPM only
 
     // Timings / distances (ms) - increased for farther backing and longer feed
-    private static final long DRIVE_BACK_MS = 2000;       // increased to back up farther
-    private static final double DRIVE_POWER = 0.35;
+    private static final long DRIVE_BACK_MS = 3000;       // increased to back up farther
+    private static final double DRIVE_POWER = 0.35   ;
     private static final long SHOOTER_SPINUP_MS = 1200L;  // open-loop spin-up wait at start
     private static final long FEED_DURATION_MS = 1200L;   // increased so balls can travel up the ramp
     private static final long BETWEEN_FEEDS_MS = 500L;    // increased pause between feeds
@@ -69,7 +69,7 @@ public class Blue3Ball extends LinearOpMode {
     private static final double CLAW_OPEN_POS = 1.0;   // open to push ball
 
     // Shooter open-loop power (applied once at start)
-    private static final double SHOOTER_APPLIED_POWER = 0.55; // tune this to reach ~120 RPM on your robot
+    private static final double SHOOTER_APPLIED_POWER = 0.65; // tune this to reach ~120 RPM on your robot
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -224,7 +224,7 @@ public class Blue3Ball extends LinearOpMode {
         final long ROTATE_120_MS = 850L;    // estimated ms to rotate 120 degrees (tune for your bot)
         final long FORWARD_MS = 2000L;      // 2 seconds forward
 
-        // rotate in place left (change for diff alliance)
+        /*// rotate in place left (change for diff alliance)
         setDrivePower(-DRIVE_POWER, -DRIVE_POWER, DRIVE_POWER, DRIVE_POWER);
         long driveEnd1 = System.currentTimeMillis();
         while (opModeIsActive() && System.currentTimeMillis() - driveEnd1 < 1000) {
@@ -238,8 +238,17 @@ public class Blue3Ball extends LinearOpMode {
         while (opModeIsActive() && System.currentTimeMillis() - driveEnd2 < FORWARD_MS) {
             sleep(5);
         }
+        setDrivePower(0, 0, 0, 0);*/
+
+
+        setDrivePower(-DRIVE_POWER, DRIVE_POWER, DRIVE_POWER, -DRIVE_POWER);
+        long driveEnd1 = System.currentTimeMillis();
+        while (opModeIsActive() && System.currentTimeMillis() - driveEnd1 < 1500) {
+            sleep(5);
+        }
         setDrivePower(0, 0, 0, 0);
     }
+
 
     // Utility: set four-drive motor powers (LF, LR, RF, RR)
     private void setDrivePower(double fl, double bl, double fr, double br) {

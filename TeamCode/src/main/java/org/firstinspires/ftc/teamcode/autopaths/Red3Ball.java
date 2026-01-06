@@ -53,7 +53,7 @@ public class Red3Ball extends LinearOpMode {
     private double emaAlpha = 0.20;      // smoothing for telemetry RPM only
 
     // Timings / distances (ms) - increased for farther backing and longer feed
-    private static final long DRIVE_BACK_MS = 2000;       // increased to back up farther
+    private static final long DRIVE_BACK_MS = 3000;       // increased to back up farther
     private static final double DRIVE_POWER = 0.35;
     private static final long SHOOTER_SPINUP_MS = 1200L;  // open-loop spin-up wait at start
     private static final long FEED_DURATION_MS = 1200L;   // increased so balls can travel up the ramp
@@ -69,7 +69,7 @@ public class Red3Ball extends LinearOpMode {
     private static final double CLAW_OPEN_POS = 1.0;   // open to push ball
 
     // Shooter open-loop power (applied once at start)
-    private static final double SHOOTER_APPLIED_POWER = 0.55; // tune this to reach ~120 RPM on your robot
+    private static final double SHOOTER_APPLIED_POWER = 0.65; // tune this to reach ~120 RPM on your robot
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -219,7 +219,7 @@ public class Red3Ball extends LinearOpMode {
 
         sleep(250);
 
-        // Time-based rotate ~120 degrees then drive forward 2 seconds (approximate)
+        /*// Time-based rotate ~120 degrees then drive forward 2 seconds (approximate)
         final double ROTATE_POWER = 0.5;    // power used for rotation (tune)
         final long ROTATE_120_MS = 850L;    // estimated ms to rotate 120 degrees (tune for your bot)
         final long FORWARD_MS = 2000L;      // 2 seconds forward
@@ -236,6 +236,13 @@ public class Red3Ball extends LinearOpMode {
         setDrivePower(DRIVE_POWER, DRIVE_POWER, DRIVE_POWER, DRIVE_POWER);
         long driveEnd2 = System.currentTimeMillis();
         while (opModeIsActive() && System.currentTimeMillis() - driveEnd2 < FORWARD_MS) {
+            sleep(5);
+        }
+        setDrivePower(0, 0, 0, 0);*/
+
+        setDrivePower(DRIVE_POWER, -DRIVE_POWER, -DRIVE_POWER, DRIVE_POWER);
+        long driveEnd1 = System.currentTimeMillis();
+        while (opModeIsActive() && System.currentTimeMillis() - driveEnd1 < 1500) {
             sleep(5);
         }
         setDrivePower(0, 0, 0, 0);
