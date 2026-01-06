@@ -86,19 +86,16 @@ public class BadWolfAuto extends OpMode {
 
     // Shooter / Turret hardware & controllers
     private DcMotor shooterMotor;
-    //    private DcMotor turretMotor;
     private BNO055IMU imu;
     private Flywheel flywheel;
-    //    private TurretController turretController;
     private static final double AUTO_SHOOTER_RPM = 130.0; // close-mode target
 
     // Intake + compression hardware (from teleop)
     private DcMotor intakeMotor;
-    //private Servo leftCompressionServo;
-    //private Servo rightCompressionServo;
     private CRServo transferMotor;   // NEW continuous servo
 
-
+    //wheel hardware
+    private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
 
     // Claw servo
     private Servo clawServo;
@@ -107,14 +104,6 @@ public class BadWolfAuto extends OpMode {
     private static final double INTAKE_ON_POWER = 1.0;
     private static final double TRANSFER_ON = 1.0;
     private static final double TRANSFER_OFF = 0.0;
-//    private static final double LEFT_COMPRESSION_ON = 1.0;
-//    private static final double RIGHT_COMPRESSION_ON = 0.0;
-//    private static final double LEFT_COMPRESSION_OFF = 0.5;
-//    private static final double RIGHT_COMPRESSION_OFF = 0.5;
-
-    // Intake-segment tracking: when starting a multi-path intake segment (3, 6, 9),
-    // set intakeSegmentEnd to the path index after which the intake should be stopped.
-    // -1 when no active intake segment.
     private int intakeSegmentEnd = -1;
 
     // Shoot pose constants and tolerance - used to ensure PRE_ACTION timer starts only when robot reaches pose
@@ -144,6 +133,22 @@ public class BadWolfAuto extends OpMode {
         preActionTimerStarted = false;
         preActionEntered = false;
         timedIntakeActive = false;
+
+        //wheel hardware
+        try {
+            frontLeftDrive = hardwareMap.get(DcMotor.class, "frontLeft");
+            backLeftDrive = hardwareMap.get(DcMotor.class, "backLeft");
+            frontRightDrive = hardwareMap.get(DcMotor.class, "frontRight");
+            backRightDrive = hardwareMap.get(DcMotor.class, "backRight");
+
+            frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+            backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+            frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
+            backRightDrive.setDirection(DcMotor.Direction.REVERSE);
+        } catch (Exception e) {
+            panelsTelemetry.debug("Init", "Drive map fail: " + e.getMessage());
+        }
+
 
         // --- Hardware for shooter & turret (match teleop names) ---
         try {
@@ -186,8 +191,6 @@ public class BadWolfAuto extends OpMode {
         // --- Intake & compression hardware (same names as teleop) ---
         try {
             intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
-            //leftCompressionServo = hardwareMap.get(Servo.class, "leftCompressionServo");
-            //rightCompressionServo = hardwareMap.get(Servo.class, "rightCompressionServo");
             transferMotor = hardwareMap.get(CRServo.class, "transfer");
 
             // Direction per request
@@ -195,12 +198,8 @@ public class BadWolfAuto extends OpMode {
 
             // Set defaults (same as teleop off state)
             intakeMotor.setPower(0.0);
-            //leftCompressionServo.setPosition(LEFT_COMPRESSION_OFF);
-            //rightCompressionServo.setPosition(RIGHT_COMPRESSION_OFF);
-
             transferMotor.setDirection(CRServo.Direction.REVERSE);
             transferMotor.setPower(TRANSFER_OFF);
-            //shooterMotor.setPower(0.0);
 
         } catch (Exception e) {
             panelsTelemetry.debug("Init", "Intake/compression mapping failed: " + e.getMessage());
@@ -234,10 +233,6 @@ public class BadWolfAuto extends OpMode {
             flywheel.setShooterOn(true);
             flywheel.setTargetRPM(AUTO_SHOOTER_RPM);
         }
-//        if (turretController != null) {
-//            turretController.captureReferences();
-//            turretController.resetPidState();
-//        }
 
         // Start measuring shooter-wait
         shooterWaitStartMs = System.currentTimeMillis();
