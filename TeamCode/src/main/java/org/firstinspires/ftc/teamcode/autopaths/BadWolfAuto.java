@@ -87,12 +87,19 @@ public class BadWolfAuto extends OpMode {
     // Shooter / Turret hardware & controllers
     private DcMotor shooterMotor;
     private BNO055IMU imu;
-    private Flywheel flywheel;
-    private static final double AUTO_SHOOTER_RPM = 130.0; // close-mode target
+    private boolean shooterOn = false;
+    private static final double targetRPM = 130; // close-mode target
+
+    private long lastShooterPosition = 0;
+    private long lastShooterTime = 0;
 
     // Intake + compression hardware (from teleop)
     private DcMotor intakeMotor;
     private CRServo transferMotor;   // NEW continuous servo
+
+    private Servo leftHoodServo;
+    private static final double LEFT_HOOD_POSITION = 0.12;
+
 
     //wheel hardware
     private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
@@ -136,31 +143,15 @@ public class BadWolfAuto extends OpMode {
 
         //wheel hardware
         try {
-            frontLeftDrive = hardwareMap.get(DcMotor.class, "frontLeft");
-            backLeftDrive = hardwareMap.get(DcMotor.class, "backLeft");
-            frontRightDrive = hardwareMap.get(DcMotor.class, "frontRight");
-            backRightDrive = hardwareMap.get(DcMotor.class, "backRight");
-
-            frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
-            backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
-            frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
-            backRightDrive.setDirection(DcMotor.Direction.REVERSE);
-        } catch (Exception e) {
-            panelsTelemetry.debug("Init", "Drive map fail: " + e.getMessage());
-        }
-
-
-        // --- Hardware for shooter & turret (match teleop names) ---
-        try {
             shooterMotor = hardwareMap.get(DcMotor.class, "shooter");
-
-            // Directions and modes (same as teleop)
             shooterMotor.setDirection(DcMotor.Direction.FORWARD);
-
             shooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
+            shooterMotor.setPower(0.0);
+            shooterOn = false;
+            lastShooterPosition = shooterMotor.getCurrentPosition();
+            lastShooterTime = System.currentTimeMillis();
         } catch (Exception e) {
-            panelsTelemetry.debug("Init", "Failed to map shooter/turret motors: " + e.getMessage());
+            panelsTelemetry.debug("Init", "Shooter map fail: " + e.getMessage());
         }
 
         // IMU init (same parameters as teleop)
@@ -174,19 +165,6 @@ public class BadWolfAuto extends OpMode {
             panelsTelemetry.debug("Init", "IMU not found or failed to init: " + e.getMessage());
         }
 
-        // Instantiate subsystems using the provided classes (pass OpMode telemetry for telemetry output)
-        try {
-            if (shooterMotor != null) flywheel = new Flywheel(shooterMotor, telemetry);
-
-            // Ensure flywheel default mode (close) and turned on so auto will drive it
-            if (flywheel != null) {
-                flywheel.setModeFar(false); // set Close mode target (90 rpm)
-                flywheel.setShooterOn(true);
-                flywheel.setTargetRPM(AUTO_SHOOTER_RPM);
-            }
-        } catch (Exception e) {
-            panelsTelemetry.debug("Init", "Flywheel/TurretController creation error: " + e.getMessage());
-        }
 
         // --- Intake & compression hardware (same names as teleop) ---
         try {
@@ -214,24 +192,32 @@ public class BadWolfAuto extends OpMode {
             panelsTelemetry.debug("Init", "Claw servo mapping failed: " + e.getMessage());
         }
 
+        try {
+            leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
+            if (leftHoodServo != null) leftHoodServo.setPosition(LEFT_HOOD_POSITION);
+        } catch (Exception e) {
+            panelsTelemetry.debug("Init", "Hood map fail: " + e.getMessage());
+        }
+
         panelsTelemetry.debug("Status", "Initialized");
         panelsTelemetry.update(telemetry);
     }
 
     @Override
     public void init_loop() {
-        // Warm up flywheel readings while waiting for start
-        if (flywheel != null) {
-            flywheel.update(System.currentTimeMillis(), false);
-        }
+
     }
 
     @Override
     public void start() {
         // Start spinner and turret references
-        if (flywheel != null) {
-            flywheel.setShooterOn(true);
-            flywheel.setTargetRPM(AUTO_SHOOTER_RPM);
+        if (shooterMotor != null) {
+            shooterMotor.setPower(1.0);
+            shooterOn = true;
+            shooterWaitStartMs = System.currentTimeMillis();
+        }
+        else{
+            shooterWaitStartMs = System.currentTimeMillis();
         }
 
         // Start measuring shooter-wait
@@ -246,13 +232,6 @@ public class BadWolfAuto extends OpMode {
 
         long nowMs = System.currentTimeMillis();
 
-        // Update flywheel (closed-loop) each loop so it runs for the whole OpMode
-        if (flywheel != null) {
-            flywheel.handleLeftTrigger(false);
-            flywheel.update(nowMs, false);
-        }
-
-
         // Run the refined FSM
         runStateMachine(nowMs);
 
@@ -262,12 +241,6 @@ public class BadWolfAuto extends OpMode {
         panelsTelemetry.debug("X", follower.getPose().getX());
         panelsTelemetry.debug("Y", follower.getPose().getY());
         panelsTelemetry.debug("Heading", follower.getPose().getHeading());
-        if (flywheel != null) {
-            panelsTelemetry.debug("Fly RPM", String.format("%.1f", flywheel.getCurrentRPM()));
-            panelsTelemetry.debug("Fly Target", String.format("%.1f", flywheel.getTargetRPM()));
-            panelsTelemetry.debug("Fly On", flywheel.isShooterOn());
-            panelsTelemetry.debug("Fly AtTarget", flywheel.isAtTarget());
-        }
 
         if (intakeMotor != null) {
             panelsTelemetry.debug("Intake Power", intakeMotor.getPower());
@@ -286,15 +259,7 @@ public class BadWolfAuto extends OpMode {
 
     @Override
     public void stop() {
-        // Stop shooter and turret safely
-        if (flywheel != null) {
-            flywheel.setShooterOn(false);
-            flywheel.update(System.currentTimeMillis(), false);
-        }
-//        if (turretController != null) {
-//            turretController.update(true, 0.0); // manual with 0 power to ensure motor stops
-//        }
-
+        if (shooterMotor != null)shooterMotor.setPower(0.0);
         // Ensure intake off and claw open
         stopIntake();
         if (clawServo != null) clawServo.setPosition(CLAW_OPEN_POS);
@@ -434,9 +399,8 @@ public class BadWolfAuto extends OpMode {
 
         switch (state) {
             case WAIT_FOR_SHOOTER:
-                boolean atTarget = (flywheel != null && flywheel.isAtTarget());
                 long elapsed = (shooterWaitStartMs < 0) ? 0 : (System.currentTimeMillis() - shooterWaitStartMs);
-                if (atTarget || elapsed >= SHOOTER_WAIT_TIMEOUT_MS) {
+                if (elapsed >= SHOOTER_WAIT_TIMEOUT_MS) {
                     // proceed to first path immediately
                     startPath(1);
                 }
