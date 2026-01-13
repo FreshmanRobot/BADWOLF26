@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.autopaths;
 
+import static java.lang.Thread.sleep;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
@@ -8,7 +10,6 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
-import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -43,6 +44,10 @@ public class BadWolfAuto extends OpMode {
     public Follower follower;
     private Paths paths;
 
+//for heading convergence
+    private static final double SHOOT_HEADING_RAD = Math.toRadians(130);
+    private static final double HEADING_TOLERANCE_RAD = Math.toRadians(3); // 2–4° is good
+
     // State machine
     private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_WAIT, CLAW_ACTION, FINISHED }
     private AutoState state = AutoState.IDLE;
@@ -73,7 +78,7 @@ public class BadWolfAuto extends OpMode {
 
     // Pose-wait timer (wait for robot to reach pose before starting PRE_ACTION). Fallback if it never quite reaches it.
     private Timer poseWaitTimer;
-    private static final double PRE_ACTION_MAX_POSE_WAIT_SECONDS = 0.3; // fallback after short timeout
+    private static final double PRE_ACTION_MAX_POSE_WAIT_SECONDS = 0.7; // fallback after short timeout
 
     // Flag to indicate whether PRE_ACTION timer has been started (we only start it when robot reaches pose or fallback triggers)
     private boolean preActionTimerStarted = false;
@@ -86,7 +91,6 @@ public class BadWolfAuto extends OpMode {
 
     // Shooter / Turret hardware & controllers
     private DcMotor shooterMotor;
-    private BNO055IMU imu;
     private boolean shooterOn = false;
     private static final double targetRPM = 130; // close-mode target
 
@@ -127,8 +131,6 @@ public class BadWolfAuto extends OpMode {
         follower = Constants.createFollower(hardwareMap);
         paths = new Paths(follower);
 
-        // Set starting pose to the start point of Path1 (and heading to match interpolation start)
-        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
 
         // Timers & state
         intakeTimer = new Timer();
@@ -147,22 +149,12 @@ public class BadWolfAuto extends OpMode {
             shooterMotor.setDirection(DcMotor.Direction.FORWARD);
             shooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             shooterMotor.setPower(0.0);
+
             shooterOn = false;
             lastShooterPosition = shooterMotor.getCurrentPosition();
             lastShooterTime = System.currentTimeMillis();
         } catch (Exception e) {
             panelsTelemetry.debug("Init", "Shooter map fail: " + e.getMessage());
-        }
-
-        // IMU init (same parameters as teleop)
-        try {
-            imu = hardwareMap.get(BNO055IMU.class, "imu");
-            BNO055IMU.Parameters imuParams = new BNO055IMU.Parameters();
-            imuParams.angleUnit = BNO055IMU.AngleUnit.RADIANS;
-            imuParams.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
-            imu.initialize(imuParams);
-        } catch (Exception e) {
-            panelsTelemetry.debug("Init", "IMU not found or failed to init: " + e.getMessage());
         }
 
 
@@ -205,11 +197,16 @@ public class BadWolfAuto extends OpMode {
 
     @Override
     public void init_loop() {
+        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
 
     }
 
     @Override
     public void start() {
+
+        // Set starting pose to the start point of Path1 (and heading to match interpolation start)
+        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
+
         // Start spinner and turret references
         if (shooterMotor != null) {
             shooterMotor.setPower(1.0);

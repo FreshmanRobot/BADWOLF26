@@ -16,7 +16,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-@Autonomous(name = "A BLUE 9 Ball", group = "Autonomous", preselectTeleOp = "???HORS???")
+@Autonomous(name = "BLUE 9 Ball", group = "Autonomous", preselectTeleOp = "???HORS???")
 @Configurable
 public class BlueSideAuto extends OpMode {
 

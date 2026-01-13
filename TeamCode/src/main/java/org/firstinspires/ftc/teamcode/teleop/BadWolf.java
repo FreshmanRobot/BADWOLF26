@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 public class BadWolf extends LinearOpMode {
 
     private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
-    private DcMotor shooter, intakeMotor;
+    private DcMotor shooter, shooter2, intakeMotor;
     private Servo clawServo=null;
     private Servo leftHoodServo=null;
     private CRServo transferMotor;   // NEW continuous servo
@@ -66,6 +66,7 @@ public class BadWolf extends LinearOpMode {
         frontRightDrive = hardwareMap.get(DcMotor.class, "frontRight");
         backRightDrive = hardwareMap.get(DcMotor.class, "backRight");
         shooter = hardwareMap.get(DcMotor.class, "shooter");
+        shooter2 = hardwareMap.get(DcMotor.class, "shooter2");
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         clawServo = hardwareMap.get(Servo.class, "clawServo");
         leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
@@ -77,6 +78,7 @@ public class BadWolf extends LinearOpMode {
         frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.REVERSE);
         shooter.setDirection(DcMotor.Direction.FORWARD);
+        shooter2.setDirection(DcMotor.Direction.FORWARD);
 
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
@@ -132,6 +134,7 @@ public class BadWolf extends LinearOpMode {
             boolean dpadDownNow = gamepad1.dpad_down || gamepad2.dpad_down;
             if (dpadDownNow && !dpadDownLast) {
                 shooter.setDirection(DcMotor.Direction.FORWARD);
+                shooter2.setDirection(DcMotor.Direction.FORWARD);
                 shooterOn = !shooterOn;
             }
             dpadDownLast = dpadDownNow;
@@ -147,6 +150,7 @@ public class BadWolf extends LinearOpMode {
             boolean dpadUpNow = gamepad1.dpad_up || gamepad2.dpad_up;
             if (dpadUpNow && !dpadUpLast) {
                 shooter.setDirection(DcMotor.Direction.REVERSE);
+                shooter2.setDirection(DcMotor.Direction.REVERSE);
                 shooterOn = !shooterOn;
             }
             dpadUpLast = dpadUpNow;
@@ -214,6 +218,7 @@ public class BadWolf extends LinearOpMode {
             double shooterPower = ff + pTerm;
             shooterPower = Math.max(0.0, Math.min(1.0, shooterPower));
             shooter.setPower(shooterOn ? shooterPower : 0.0);
+            shooter2.setPower(shooterOn ? shooterPower : 0.0);
 
             boolean atTargetNow = Math.abs(targetRPM - currentRPM) <= TARGET_TOLERANCE_RPM;
             if (atTargetNow && !atTargetLast) {
