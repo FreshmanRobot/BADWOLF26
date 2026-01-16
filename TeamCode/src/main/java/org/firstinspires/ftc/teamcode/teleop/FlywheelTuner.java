@@ -10,9 +10,10 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 @TeleOp
 public class FlywheelTuner extends OpMode{
     public DcMotorEx flywheelMotor;
+    //public DcMotor secondMotor;
 
-    public double highVelocity = 200;
-    public double lowVelocity = 120;
+    public double highVelocity = 1500;
+    public double lowVelocity = 900;
 
     double curTargetVelocity = highVelocity;
 
@@ -24,12 +25,17 @@ public class FlywheelTuner extends OpMode{
 
     @Override
     public void init(){
-        flywheelMotor = hardwareMap.get(DcMotorEx.class, "motor");
+        flywheelMotor = hardwareMap.get(DcMotorEx.class, "shooter");
         flywheelMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         flywheelMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P, 0, 0, F);
         flywheelMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER,pidfCoefficients);
         telemetry.addLine("Init complete");
+
+        //secondMotor = hardwareMap.get(DcMotorEx.class, "shooter2");
+        //secondMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        //secondMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+
     }
 
     @Override
@@ -37,6 +43,7 @@ public class FlywheelTuner extends OpMode{
         //get all our gamepad commands
         //set target velocity
         //update telemetry
+
 
         if(gamepad1.yWasPressed()){
             if (curTargetVelocity == highVelocity){
@@ -72,10 +79,12 @@ public class FlywheelTuner extends OpMode{
 
         //set velocity
         flywheelMotor.setVelocity(curTargetVelocity);
+        //secondMotor.setPower(flywheelMotor.getPower());
 
         double curVelocity = flywheelMotor.getVelocity();
         double error = curTargetVelocity - curVelocity;
 
+        telemetry.addData("RPM", "%.2f", (curVelocity/28)*60);
         telemetry.addData("Target Velocity", curTargetVelocity);
         telemetry.addData("Current Velocity", "%.2f", curVelocity);
         telemetry.addData("Error", "%.2f", error);

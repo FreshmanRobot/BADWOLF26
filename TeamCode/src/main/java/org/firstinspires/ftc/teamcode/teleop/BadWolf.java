@@ -14,20 +14,21 @@ public class BadWolf extends LinearOpMode {
     private Servo clawServo=null;
     private Servo leftHoodServo=null;
     private CRServo transferMotor;   // NEW continuous servo
+    private Servo gateServo=null;
 
     // shooter control state
     private boolean shooterOn = true;
-    private static final double MAX_RPM = 200;
-    private static final double TICKS_PER_REV = 537.6;
+    private static final double MAX_RPM = 5000;
+    private static final double TICKS_PER_REV = 28.0;
     private double currentRPM = 0.0;
     private int lastShooterPosition = 0;
     private long lastShooterTime = 0L;
 
-    private double targetRPM = 6000.0;
-    private double kP = 0.0003;
+    private double targetRPM = 3000;
+    private double kP = 0.00018;
     private double emaAlpha = 0.15;
 
-    private double rpmScale = 0.75;
+    private double rpmScale = 1.0;
     private boolean xPressedLast = false;
     private boolean yPressedLast = false;
     private int clawActionPhase = 0;
@@ -41,7 +42,7 @@ public class BadWolf extends LinearOpMode {
     private boolean atTargetLast = false;
     private boolean rumbling = false;
     private long rumbleEndTimeMs = 0L;
-    private static final double TARGET_TOLERANCE_RPM = 5.0;
+    private static final double TARGET_TOLERANCE_RPM = 50.0;
     private static final long RUMBLE_DURATION_MS = 1000L;
 
     // hood/claw timing
@@ -49,6 +50,9 @@ public class BadWolf extends LinearOpMode {
     private double leftHoodPosition = 0.12;
     private long lastLeftHoodAdjustMs = 0L;
     private static final long HOOD_ADJUST_DEBOUNCE_MS = 120L;
+    private static final long GATE_DEBOUNCE_MS = 120L;
+    private long lastGateMs = 0L;
+
     private static final long CLAW_CLOSE_MS = 500L;
 
     // Speed updating
@@ -57,6 +61,11 @@ public class BadWolf extends LinearOpMode {
     private static final double PRECISION_SCALE = 0.25; // slow precision multiplier
     private boolean leftBumperLast = false;
     private boolean rightBumperLast = false;
+
+    //Gate
+    private double gateClosed = 90;
+    private double gateOpen = 0;
+
 
     @Override
     public void runOpMode() {
@@ -70,6 +79,7 @@ public class BadWolf extends LinearOpMode {
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         clawServo = hardwareMap.get(Servo.class, "clawServo");
         leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
+        gateServo = hardwareMap.get(Servo.class, "gateServo");
         transferMotor = hardwareMap.get(CRServo.class, "transfer"); // NEW mapping
         transferMotor.setDirection(CRServo.Direction.FORWARD);
 
@@ -81,18 +91,21 @@ public class BadWolf extends LinearOpMode {
         shooter2.setDirection(DcMotor.Direction.FORWARD);
 
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
         lastShooterPosition = shooter.getCurrentPosition();
         lastShooterTime = System.currentTimeMillis();
-        targetRPM = 120;
+        targetRPM = 2500.0;
         shooterOn = true;
         clawServo.setPosition(0.0);
 
         // initial positions
         leftHoodServo.setPosition(leftHoodPosition);
+        gateServo.setPosition(gateClosed);
 
         waitForStart();
 
@@ -134,23 +147,23 @@ public class BadWolf extends LinearOpMode {
             boolean dpadDownNow = gamepad1.dpad_down || gamepad2.dpad_down;
             if (dpadDownNow && !dpadDownLast) {
                 shooter.setDirection(DcMotor.Direction.FORWARD);
-                shooter2.setDirection(DcMotor.Direction.FORWARD);
+                shooter2.setDirection(DcMotor.Direction.REVERSE);
                 shooterOn = !shooterOn;
             }
             dpadDownLast = dpadDownNow;
 
             boolean dpadLeftNow = gamepad1.dpad_left || gamepad2.dpad_left;
-            if (dpadLeftNow && !dpadLeftLast) targetRPM = Math.max(0.0, targetRPM - 10.0);
+            if (dpadLeftNow && !dpadLeftLast) targetRPM = Math.max(0.0, targetRPM - 100.0);
             dpadLeftLast = dpadLeftNow;
 
             boolean dpadRightNow = gamepad1.dpad_right || gamepad2.dpad_right;
-            if (dpadRightNow && !dpadRightLast) targetRPM = Math.min(MAX_RPM, targetRPM + 10.0);
+            if (dpadRightNow && !dpadRightLast) targetRPM = Math.min(MAX_RPM, targetRPM + 100.0);
             dpadRightLast = dpadRightNow;
 
             boolean dpadUpNow = gamepad1.dpad_up || gamepad2.dpad_up;
             if (dpadUpNow && !dpadUpLast) {
                 shooter.setDirection(DcMotor.Direction.REVERSE);
-                shooter2.setDirection(DcMotor.Direction.REVERSE);
+                shooter2.setDirection(DcMotor.Direction.FORWARD);
                 shooterOn = !shooterOn;
             }
             dpadUpLast = dpadUpNow;
@@ -188,6 +201,16 @@ public class BadWolf extends LinearOpMode {
                 leftHoodServo.setPosition(leftHoodPosition);
             }
 
+            // GATE
+            if (gamepad2.a && nowMs - lastGateMs >= GATE_DEBOUNCE_MS) {
+                lastGateMs = nowMs;
+                gateServo.setPosition(gateOpen);
+            }
+            if (gamepad2.b && nowMs - lastGateMs >= GATE_DEBOUNCE_MS) {
+                lastGateMs = nowMs;
+                gateServo.setPosition(gateClosed);
+            }
+
             // RPM measurement
             int currentPosition = shooter.getCurrentPosition();
             int deltaTicks = currentPosition - lastShooterPosition;
@@ -218,7 +241,7 @@ public class BadWolf extends LinearOpMode {
             double shooterPower = ff + pTerm;
             shooterPower = Math.max(0.0, Math.min(1.0, shooterPower));
             shooter.setPower(shooterOn ? shooterPower : 0.0);
-            shooter2.setPower(shooterOn ? shooterPower : 0.0);
+            shooter2.setPower(shooter.getPower());
 
             boolean atTargetNow = Math.abs(targetRPM - currentRPM) <= TARGET_TOLERANCE_RPM;
             if (atTargetNow && !atTargetLast) {
@@ -248,10 +271,10 @@ public class BadWolf extends LinearOpMode {
             telemetry.addData("Target RPM", "%.1f", targetRPM);
             telemetry.addData("Shooter Power", "%.2f", shooter.getPower());
             telemetry.addData("Shooter On", shooterOn);
-            telemetry.addData("Hood Position", "%.2f", hoodPosition);
-            telemetry.addData("Claw Position", "%.2f", clawServo.getPosition());
-            telemetry.addData("Intake Power", "%.2f", intakeMotor.getPower());
-            telemetry.addData("Transfer Power", "%.2f", transferMotor.getPower());
+//            telemetry.addData("Hood Position", "%.2f", hoodPosition);
+//            telemetry.addData("Claw Position", "%.2f", clawServo.getPosition());
+//            telemetry.addData("Intake Power", "%.2f", intakeMotor.getPower());
+//            telemetry.addData("Transfer Power", "%.2f", transferMotor.getPower());
             telemetry.update();
         }
     }

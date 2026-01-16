@@ -78,7 +78,7 @@ public class BadWolfAuto extends OpMode {
 
     // Pose-wait timer (wait for robot to reach pose before starting PRE_ACTION). Fallback if it never quite reaches it.
     private Timer poseWaitTimer;
-    private static final double PRE_ACTION_MAX_POSE_WAIT_SECONDS = 0.7; // fallback after short timeout
+    private static final double PRE_ACTION_MAX_POSE_WAIT_SECONDS = 0.3; // fallback after short timeout
 
     // Flag to indicate whether PRE_ACTION timer has been started (we only start it when robot reaches pose or fallback triggers)
     private boolean preActionTimerStarted = false;
@@ -90,9 +90,11 @@ public class BadWolfAuto extends OpMode {
     private static final long SHOOTER_WAIT_TIMEOUT_MS = 4000L; // fallback timeout if shooter doesn't spin up
 
     // Shooter / Turret hardware & controllers
-    private DcMotor shooterMotor;
+    private DcMotor shooterMotor, shooter2;
     private boolean shooterOn = false;
-    private static final double targetRPM = 130; // close-mode target
+
+    private static final double maxRPM = 5000;
+    private static final double targetRPM = 2000; // close-mode target
 
     private long lastShooterPosition = 0;
     private long lastShooterTime = 0;
@@ -157,6 +159,15 @@ public class BadWolfAuto extends OpMode {
             panelsTelemetry.debug("Init", "Shooter map fail: " + e.getMessage());
         }
 
+        try {
+            shooter2 = hardwareMap.get(DcMotor.class, "shooter2");
+            shooter2.setDirection(DcMotor.Direction.REVERSE);
+            shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            shooter2.setPower(0.0);
+
+        } catch (Exception e) {
+            panelsTelemetry.debug("Init", "Shooter map fail: " + e.getMessage());
+        }
 
         // --- Intake & compression hardware (same names as teleop) ---
         try {
@@ -210,6 +221,7 @@ public class BadWolfAuto extends OpMode {
         // Start spinner and turret references
         if (shooterMotor != null) {
             shooterMotor.setPower(1.0);
+            shooter2.setPower(1.0);
             shooterOn = true;
             shooterWaitStartMs = System.currentTimeMillis();
         }
@@ -257,6 +269,7 @@ public class BadWolfAuto extends OpMode {
     @Override
     public void stop() {
         if (shooterMotor != null)shooterMotor.setPower(0.0);
+        if (shooter2 != null)shooter2.setPower(0.0);
         // Ensure intake off and claw open
         stopIntake();
         if (clawServo != null) clawServo.setPosition(CLAW_OPEN_POS);
