@@ -2,70 +2,66 @@ package org.firstinspires.ftc.teamcode.teleop;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
-@TeleOp(name="BadWolf", group="Linear OpMode")
+import org.firstinspires.ftc.teamcode.subsystems.GateController;
+import org.firstinspires.ftc.teamcode.subsystems.ClawController;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelController;
+
+
+@TeleOp(name="A BadWolf Official ", group="Linear OpMode")
 public class BadWolf extends LinearOpMode {
 
     private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
-    private DcMotor shooter, shooter2, intakeMotor;
-    private Servo clawServo=null;
-    private Servo leftHoodServo=null;
-    private CRServo transferMotor;   // NEW continuous servo
-    private Servo gateServo=null;
+    private DcMotorEx shooterEx;
+    private DcMotor shooter2, intakeMotor;
+    private Servo clawServo = null;
+    private Servo leftHoodServo = null;
+    private Servo gateServo = null;
 
-    // shooter control state
-    private boolean shooterOn = true;
-    private static final double MAX_RPM = 5000;
-    private static final double TICKS_PER_REV = 28.0;
-    private double currentRPM = 0.0;
-    private int lastShooterPosition = 0;
-    private long lastShooterTime = 0L;
+    // Gate/Intake constants - UPDATED POSITIONS
+    private static final double GATE_OPEN = 0.28;
+    private static final double GATE_CLOSED = 0.73;
+    private static final long INTAKE_DURATION_MS = 1200;
+    private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
+    private static final double INTAKE_SEQUENCE_POWER = 1.0;
+
+    // shooter state (we will drive it via FlywheelController)
+    private FlywheelController flywheel;
 
     private double targetRPM = 3000;
-    private double kP = 0.00018;
-    private double emaAlpha = 0.15;
 
     private double rpmScale = 1.0;
     private boolean xPressedLast = false;
     private boolean yPressedLast = false;
-    private int clawActionPhase = 0;
-    private long clawActionStartMs = 0L;
-
 
     private boolean dpadDownLast = false;
     private boolean dpadLeftLast = false;
     private boolean dpadRightLast = false;
     private boolean dpadUpLast = false;
+    private boolean bPressedLast = false;
+
     private boolean atTargetLast = false;
     private boolean rumbling = false;
     private long rumbleEndTimeMs = 0L;
-    private static final double TARGET_TOLERANCE_RPM = 50.0;
     private static final long RUMBLE_DURATION_MS = 1000L;
 
     // hood/claw timing
-    private double hoodPosition = 0;
-    private double leftHoodPosition = 0.12;
-    private long lastLeftHoodAdjustMs = 0L;
-    private static final long HOOD_ADJUST_DEBOUNCE_MS = 120L;
-    private static final long GATE_DEBOUNCE_MS = 120L;
-    private long lastGateMs = 0L;
+    private double leftHoodPosition = 0.9;
 
+    // Claw constants
+    private static final double CLAW_OPEN = 0.2;
+    private static final double CLAW_CLOSED = 0.63;
     private static final long CLAW_CLOSE_MS = 500L;
 
-    // Speed updating
-    // precision driving / macro buttons
-    private double driveScale = 1.0;              // current drive scale (1.0 = normal)
-    private static final double PRECISION_SCALE = 0.25; // slow precision multiplier
+    // precision driving
+    private double driveScale = 1.0;
+    private static final double PRECISION_SCALE = 0.25;
     private boolean leftBumperLast = false;
     private boolean rightBumperLast = false;
-
-    //Gate
-    private double gateClosed = 90;
-    private double gateOpen = 0;
-
 
     @Override
     public void runOpMode() {
@@ -74,69 +70,83 @@ public class BadWolf extends LinearOpMode {
         backLeftDrive = hardwareMap.get(DcMotor.class, "backLeft");
         frontRightDrive = hardwareMap.get(DcMotor.class, "frontRight");
         backRightDrive = hardwareMap.get(DcMotor.class, "backRight");
-        shooter = hardwareMap.get(DcMotor.class, "shooter");
+
+        // Obtain shooter as DcMotorEx (FlywheelController expects DcMotorEx primary)
+        shooterEx = hardwareMap.get(DcMotorEx.class, "shooter");
         shooter2 = hardwareMap.get(DcMotor.class, "shooter2");
+
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         clawServo = hardwareMap.get(Servo.class, "clawServo");
         leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
         gateServo = hardwareMap.get(Servo.class, "gateServo");
-        transferMotor = hardwareMap.get(CRServo.class, "transfer"); // NEW mapping
-        transferMotor.setDirection(CRServo.Direction.FORWARD);
 
         frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
         backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
         frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.REVERSE);
-        shooter.setDirection(DcMotor.Direction.FORWARD);
-        shooter2.setDirection(DcMotor.Direction.FORWARD);
+        shooterEx.setDirection(DcMotor.Direction.FORWARD);
+        shooter2.setDirection(DcMotor.Direction.REVERSE);
 
-        shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        // let FlywheelController handle encoder modes; keep shooter2 as no-encoder mirror
         shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+        GateController gateController;
+        ClawController clawController;
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-        lastShooterPosition = shooter.getCurrentPosition();
-        lastShooterTime = System.currentTimeMillis();
-        targetRPM = 2500.0;
-        shooterOn = true;
+        // Initialize controllers
+        targetRPM = 2900.0;
         clawServo.setPosition(0.0);
-
-        // initial positions
         leftHoodServo.setPosition(leftHoodPosition);
-        gateServo.setPosition(gateClosed);
+
+        clawController = new ClawController(clawServo, CLAW_OPEN, CLAW_CLOSED, CLAW_CLOSE_MS);
+        gateController = new GateController(
+                gateServo, intakeMotor,
+                GATE_OPEN, GATE_CLOSED,
+                INTAKE_DURATION_MS, CLAW_TRIGGER_BEFORE_END_MS,
+                INTAKE_SEQUENCE_POWER
+        );
+
+        // Initialize at the Open position
+        gateController.setGateClosed(false);
+        gateServo.setPosition(GATE_OPEN);
+
+        // Try to obtain a voltage sensor if available (optional)
+        VoltageSensor voltageSensor = null;
+        try {
+            if (hardwareMap.voltageSensor.iterator().hasNext()) {
+                voltageSensor = hardwareMap.voltageSensor.iterator().next();
+            }
+        } catch (Exception ignored) {}
+
+        // Create FlywheelController: primary (DcMotorEx), secondary (DcMotor), telemetry, voltageSensor (may be null)
+        flywheel = new FlywheelController(shooterEx, shooter2, telemetry, voltageSensor);
+        flywheel.setTargetRpm(targetRPM);
+        flywheel.setShooterOn(true);
 
         waitForStart();
-
         while (opModeIsActive()) {
             long nowMs = System.currentTimeMillis();
 
-            // DRIVE
-            double y = -gamepad1.left_stick_y; // Remember, Y stick value is reversed
-            double x = gamepad1.left_stick_x; // Counteract imperfect strafing
+            // DRIVE LOGIC
+            double y = -gamepad1.left_stick_y;
+            double x = gamepad1.left_stick_x;
             double rx = gamepad1.right_stick_x;
 
-            // Denominator is the largest motor power (absolute value) or 1
-            // This ensures all the powers maintain the same ratio,
-            // but only if at least one is out of the range [-1, 1]
             double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
             double frontLeftPower = (y + x + rx) / denominator;
             double backLeftPower = (y - x + rx) / denominator;
             double frontRightPower = (y - x - rx) / denominator;
             double backRightPower = (y + x - rx) / denominator;
 
-            // Macro buttons: left bumper -> precision/slow mode, right bumper -> normal mode
             boolean leftBumperNow = gamepad1.left_bumper || gamepad2.left_bumper;
-            if (leftBumperNow && !leftBumperLast) {
-                driveScale = PRECISION_SCALE;
-            }
+            if (leftBumperNow && !leftBumperLast) driveScale = PRECISION_SCALE;
             leftBumperLast = leftBumperNow;
 
             boolean rightBumperNow = gamepad1.right_bumper || gamepad2.right_bumper;
-            if (rightBumperNow && !rightBumperLast) {
-                driveScale = 1.0;
-            }
+            if (rightBumperNow && !rightBumperLast) driveScale = 1.0;
             rightBumperLast = rightBumperNow;
 
             frontLeftDrive.setPower(frontLeftPower * driveScale);
@@ -144,137 +154,96 @@ public class BadWolf extends LinearOpMode {
             frontRightDrive.setPower(frontRightPower * driveScale);
             backRightDrive.setPower(backRightPower * driveScale);
 
+            // SHOOTER CONTROLS (same gamepad mapping preserved)
             boolean dpadDownNow = gamepad1.dpad_down || gamepad2.dpad_down;
             if (dpadDownNow && !dpadDownLast) {
-                shooter.setDirection(DcMotor.Direction.FORWARD);
+                shooterEx.setDirection(DcMotor.Direction.FORWARD);
                 shooter2.setDirection(DcMotor.Direction.REVERSE);
-                shooterOn = !shooterOn;
+                flywheel.toggleShooterOn();
             }
             dpadDownLast = dpadDownNow;
 
             boolean dpadLeftNow = gamepad1.dpad_left || gamepad2.dpad_left;
-            if (dpadLeftNow && !dpadLeftLast) targetRPM = Math.max(0.0, targetRPM - 100.0);
+            if (dpadLeftNow && !dpadLeftLast) {
+                targetRPM = Math.max(0.0, targetRPM - 100.0);
+                flywheel.setTargetRpm(targetRPM);
+            }
             dpadLeftLast = dpadLeftNow;
 
             boolean dpadRightNow = gamepad1.dpad_right || gamepad2.dpad_right;
-            if (dpadRightNow && !dpadRightLast) targetRPM = Math.min(MAX_RPM, targetRPM + 100.0);
+            if (dpadRightNow && !dpadRightLast) {
+                // Respect FlywheelController's MAX_RPM by clamping
+                targetRPM = Math.min(FlywheelController.MAX_RPM, targetRPM + 100.0);
+                flywheel.setTargetRpm(targetRPM);
+            }
             dpadRightLast = dpadRightNow;
 
             boolean dpadUpNow = gamepad1.dpad_up || gamepad2.dpad_up;
             if (dpadUpNow && !dpadUpLast) {
-                shooter.setDirection(DcMotor.Direction.REVERSE);
+                shooterEx.setDirection(DcMotor.Direction.REVERSE);
                 shooter2.setDirection(DcMotor.Direction.FORWARD);
-                shooterOn = !shooterOn;
+                flywheel.toggleShooterOn();
             }
             dpadUpLast = dpadUpNow;
 
-            // INTAKE
-            if (gamepad1.right_trigger > 0.1 || gamepad2.right_trigger > 0.1) {
-                intakeMotor.setDirection(DcMotor.Direction.FORWARD);
-                transferMotor.setDirection(DcMotor.Direction.FORWARD);
-                intakeMotor.setPower(1.0);
-                transferMotor.setPower(1.0);
-            } else {
-                intakeMotor.setPower(0.0);
-                transferMotor.setPower(0.0);
-            }
-
-            if (gamepad1.left_trigger > 0.1 || gamepad2.left_trigger > 0.1) {
-                intakeMotor.setDirection(DcMotor.Direction.REVERSE);
-                transferMotor.setDirection(DcMotor.Direction.REVERSE);
-                intakeMotor.setPower(1.0);
-                transferMotor.setPower(1.0);
-            } else {
-                intakeMotor.setPower(0.0);
-                transferMotor.setPower(0.0);
-            }
-
-            // Hood adjustments
-            if (gamepad1.a && nowMs - lastLeftHoodAdjustMs >= HOOD_ADJUST_DEBOUNCE_MS) {
-                lastLeftHoodAdjustMs = nowMs;
-                leftHoodPosition = Math.min(0.45, leftHoodPosition + 0.025);
-                leftHoodServo.setPosition(leftHoodPosition);
-            }
-            if (gamepad1.b && nowMs - lastLeftHoodAdjustMs >= HOOD_ADJUST_DEBOUNCE_MS) {
-                lastLeftHoodAdjustMs = nowMs;
-                leftHoodPosition = Math.max(0.12, leftHoodPosition - 0.025);
-                leftHoodServo.setPosition(leftHoodPosition);
-            }
-
-            // GATE
-            if (gamepad2.a && nowMs - lastGateMs >= GATE_DEBOUNCE_MS) {
-                lastGateMs = nowMs;
-                gateServo.setPosition(gateOpen);
-            }
-            if (gamepad2.b && nowMs - lastGateMs >= GATE_DEBOUNCE_MS) {
-                lastGateMs = nowMs;
-                gateServo.setPosition(gateClosed);
-            }
-
-            // RPM measurement
-            int currentPosition = shooter.getCurrentPosition();
-            int deltaTicks = currentPosition - lastShooterPosition;
-            long deltaTimeMs = nowMs - lastShooterTime;
-            if (deltaTimeMs <= 0) deltaTimeMs = 1;
-            double ticksPerSec = (deltaTicks * 1000.0) / deltaTimeMs;
-            double measuredRPMRaw = (ticksPerSec / TICKS_PER_REV) * 60.0;
-            double measuredRPMScaled = measuredRPMRaw * rpmScale;
-
-            currentRPM = (1.0 - emaAlpha) * currentRPM + emaAlpha * measuredRPMScaled;
-            if (currentRPM < 0.0) currentRPM = 0.0;
-            lastShooterPosition = currentPosition;
-            lastShooterTime = nowMs;
-
-            boolean yNow = gamepad1.y || gamepad2.y;
-            if (yNow && !yPressedLast) {
-                double safeMeasured = Math.abs(measuredRPMRaw);
-                if (safeMeasured >= 1.0) {
-                    double candidateScale = targetRPM / measuredRPMRaw;
-                    rpmScale = Math.max(0.2, Math.min(3.0, candidateScale));
+            // INTAKE (transfer motor removed)
+            if (!gateController.isBusy()) {
+                if (gamepad1.right_trigger > 0.1 || gamepad2.right_trigger > 0.1) {
+                    intakeMotor.setDirection(DcMotor.Direction.FORWARD);
+                    intakeMotor.setPower(1.0);
+                } else if (gamepad1.left_trigger > 0.1 || gamepad2.left_trigger > 0.1) {
+                    intakeMotor.setDirection(DcMotor.Direction.REVERSE);
+                    intakeMotor.setPower(1.0);
+                } else {
+                    intakeMotor.setPower(0.0);
                 }
+            }
+
+            // GATE TOGGLE (B Button - Gamepad 1 or 2)
+            boolean bNow = gamepad1.b || gamepad2.b;
+            if (bNow && !bPressedLast && !gateController.isBusy()) {
+                gateController.toggleGate();
+            }
+            bPressedLast = bNow;
+
+            // INTAKE AUTO SEQUENCE (Y Button)
+            boolean yNow = gamepad1.y || gamepad2.y;
+            if (yNow && !yPressedLast && !gateController.isBusy()) {
+                gateController.startIntakeSequence(nowMs);
             }
             yPressedLast = yNow;
 
-            double ff = targetRPM / Math.max(1.0, MAX_RPM);
-            double error = targetRPM - currentRPM;
-            double pTerm = kP * error;
-            double shooterPower = ff + pTerm;
-            shooterPower = Math.max(0.0, Math.min(1.0, shooterPower));
-            shooter.setPower(shooterOn ? shooterPower : 0.0);
-            shooter2.setPower(shooter.getPower());
+            // Update controllers
+            boolean shouldTriggerClaw = gateController.update(nowMs);
+            if (shouldTriggerClaw) clawController.trigger(nowMs);
 
-            boolean atTargetNow = Math.abs(targetRPM - currentRPM) <= TARGET_TOLERANCE_RPM;
+            // --- Flywheel PIDF update (replaces manual PID-ish section) ---
+            // Keep targetRPM in sync with flywheel
+            flywheel.setTargetRpm(targetRPM);
+            flywheel.update();
+
+            // Rumble at target using FlywheelController isAtTarget()
+            boolean atTargetNow = flywheel.isAtTarget();
             if (atTargetNow && !atTargetLast) {
                 rumbling = true;
                 rumbleEndTimeMs = nowMs + RUMBLE_DURATION_MS;
-                try { gamepad1.rumble((int) RUMBLE_DURATION_MS); } catch (Throwable ignored) {}
-                try { gamepad2.rumble((int) RUMBLE_DURATION_MS); } catch (Throwable ignored) {}
+                gamepad1.rumble((int) RUMBLE_DURATION_MS);
+                gamepad2.rumble((int) RUMBLE_DURATION_MS);
             }
             atTargetLast = atTargetNow;
-            if (rumbling && nowMs > rumbleEndTimeMs) rumbling = false;
 
-            // CLAW toggle
+            // CLAW MANUAL (X Button)
             boolean xNow = gamepad1.x || gamepad2.x;
-            if (xNow && !xPressedLast) {
-                clawServo.setPosition(1.0);
-                clawActionPhase = 1;
-                clawActionStartMs = nowMs;
-            }
+            if (xNow && !xPressedLast) clawController.trigger(nowMs);
             xPressedLast = xNow;
-            if (clawActionPhase == 1 && nowMs >= clawActionStartMs + CLAW_CLOSE_MS) {
-                clawServo.setPosition(0.0);
-                clawActionPhase = 0;
-            }
+            clawController.update(nowMs);
 
             // TELEMETRY
-            telemetry.addData("RPM", "%.1f", currentRPM);
-            telemetry.addData("Target RPM", "%.1f", targetRPM);
-            telemetry.addData("Shooter Power", "%.2f", shooter.getPower());
-            telemetry.addData("Shooter On", shooterOn);
-//            telemetry.addData("Hood Position", "%.2f", hoodPosition);
-//            telemetry.addData("Claw Position", "%.2f", clawServo.getPosition());
-//            telemetry.addData("Intake Power", "%.2f", intakeMotor.getPower());
-//            telemetry.addData("Transfer Power", "%.2f", transferMotor.getPower());
+            telemetry.addData("Gate Pos", gateServo.getPosition());
+            telemetry.addData("RPM", "%.1f", flywheel.getCurrentRPM());
+            telemetry.addData("Target RPM", "%.1f", flywheel.getTargetRpm());
+            telemetry.addData("Shooter Power", "%.3f", flywheel.getLastAppliedPower());
+            telemetry.addData("PIDF Mode", flywheel.isUsingFarCoefficients() ? "FAR" : "CLOSE");
             telemetry.update();
         }
     }

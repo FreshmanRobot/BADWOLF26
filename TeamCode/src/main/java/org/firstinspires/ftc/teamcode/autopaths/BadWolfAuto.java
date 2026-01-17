@@ -124,6 +124,7 @@ public class BadWolfAuto extends OpMode {
     private static final double SHOOT_POSE_Y = 96.0;
     private static final double START_POSE_TOLERANCE_IN = 6.0; // increased tolerance to avoid tiny-miss stalls
 
+
     public BadWolfAuto() {}
 
     @Override
