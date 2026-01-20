@@ -74,7 +74,7 @@ public class BadWolf extends LinearOpMode {
     private boolean xImuAlignActive = false; // acts as an "aligning" state for X button/IMU align
 
     @Override
-    public void runOpMode() {
+    public void runOpMode() {//imu align
 
         frontLeftDrive = hardwareMap.get(DcMotor.class, "frontLeft");
         backLeftDrive = hardwareMap.get(DcMotor.class, "backLeft");
