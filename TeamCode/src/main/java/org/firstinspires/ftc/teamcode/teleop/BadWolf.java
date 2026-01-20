@@ -31,7 +31,7 @@ public class BadWolf extends LinearOpMode {
     private static final double GATE_CLOSED = 0.73;
     private static final long INTAKE_DURATION_MS = 1200;
     private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
-    private static final double INTAKE_SEQUENCE_POWER = 1.0;
+    private static final double INTAKE_SEQUENCE_POWER = -1.0;
 
     // shooter state (we will drive it via FlywheelController)
     private FlywheelController flywheel;
@@ -259,10 +259,10 @@ public class BadWolf extends LinearOpMode {
             // INTAKE (transfer motor removed)
             if (!gateController.isBusy()) {
                 if (gamepad1.right_trigger > 0.1 || gamepad2.right_trigger > 0.1) {
-                    intakeMotor.setDirection(DcMotor.Direction.FORWARD);
+                    intakeMotor.setDirection(DcMotor.Direction.REVERSE);
                     intakeMotor.setPower(1.0);
                 } else if (gamepad1.left_trigger > 0.1 || gamepad2.left_trigger > 0.1) {
-                    intakeMotor.setDirection(DcMotor.Direction.REVERSE);
+                    intakeMotor.setDirection(DcMotor.Direction.FORWARD);
                     intakeMotor.setPower(1.0);
                 } else {
                     intakeMotor.setPower(0.0);
