@@ -30,10 +30,10 @@ public class FlywheelController {
     @Sorter(sort = 2) public static double RPM_SWITCH_THRESHOLD = 3000.0;
 
     // --- CLOSE PIDF coefficients (for target RPM below threshold) ---
-    @Sorter(sort = 3) public static double CLOSE_kP = 0.0019;
-    @Sorter(sort = 4) public static double CLOSE_kI = 0.0027;
-    @Sorter(sort = 5) public static double CLOSE_kD = 0.0004;
-    @Sorter(sort = 6) public static double CLOSE_kF = 1.72;
+    @Sorter(sort = 3) public static double CLOSE_kP = 0.0022;
+    @Sorter(sort = 4) public static double CLOSE_kI = 0.0016;
+    @Sorter(sort = 5) public static double CLOSE_kD = 0.000005;
+    @Sorter(sort = 6) public static double CLOSE_kF = 1.85;
     @Sorter(sort = 7) public static double CLOSE_integralLimit = 50;
     @Sorter(sort = 8) public static double CLOSE_derivativeAlpha = 0.9;
     @Sorter(sort = 9) public static double CLOSE_rpmFilterAlpha = 0.72;
@@ -43,16 +43,16 @@ public class FlywheelController {
     @Sorter(sort = 13) public static double CLOSE_rpmTolerance = 50.0;
 
     // --- FAR PIDF coefficients (for target RPM at or above threshold) ---
-    @Sorter(sort = 14) public static double FAR_kP = 0.00158;
-    @Sorter(sort = 15) public static double FAR_kI = 0.0040;
-    @Sorter(sort = 16) public static double FAR_kD = 0.00001;
-    @Sorter(sort = 17) public static double FAR_kF = 1.92;
+    @Sorter(sort = 14) public static double FAR_kP = 0.0022;
+    @Sorter(sort = 15) public static double FAR_kI = 0.0016;
+    @Sorter(sort = 16) public static double FAR_kD = 0.000005;
+    @Sorter(sort = 17) public static double FAR_kF = 1.85;
     @Sorter(sort = 18) public static double FAR_integralLimit = 50;
     @Sorter(sort = 19) public static double FAR_derivativeAlpha = 0.72;
     @Sorter(sort = 20) public static double FAR_rpmFilterAlpha = 0.9;
     @Sorter(sort = 21) public static double FAR_powerSmoothingAlpha = 0.5;
-    @Sorter(sort = 22) public static double FAR_ffReferenceVoltage = 13.2;
-    @Sorter(sort = 23) public static double FAR_ffReferenceMaxTicksPerSec = 4930;
+    @Sorter(sort = 22) public static double FAR_ffReferenceVoltage = 11.87;
+    @Sorter(sort = 23) public static double FAR_ffReferenceMaxTicksPerSec = 5180;
     @Sorter(sort = 24) public static double FAR_rpmTolerance = 50.0;
 
     // --- Target RPM presets ---

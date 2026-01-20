@@ -24,7 +24,7 @@ public class BadWolf extends LinearOpMode {
 
     // Gate/Intake constants - UPDATED POSITIONS
     private static final double GATE_OPEN = 0.28;
-    private static final double GATE_CLOSED = 0.73;
+    private static final double GATE_CLOSED = 0.60;
     private static final long INTAKE_DURATION_MS = 1200;
     private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
     private static final double INTAKE_SEQUENCE_POWER = 1.0;
@@ -97,7 +97,7 @@ public class BadWolf extends LinearOpMode {
         telemetry.update();
 
         // Initialize controllers
-        targetRPM = 2900.0;
+        targetRPM = 3000;
         clawServo.setPosition(0.0);
         leftHoodServo.setPosition(leftHoodPosition);
 
@@ -111,7 +111,7 @@ public class BadWolf extends LinearOpMode {
 
         // Initialize at the Open position
         gateController.setGateClosed(false);
-        gateServo.setPosition(GATE_OPEN);
+        gateServo.setPosition(GATE_CLOSED);
 
         // Try to obtain a voltage sensor if available (optional)
         VoltageSensor voltageSensor = null;
