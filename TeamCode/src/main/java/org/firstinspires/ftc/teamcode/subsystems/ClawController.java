@@ -29,6 +29,9 @@ public class ClawController {
         if (active && nowMs >= startMs + closeMs) {
             claw.setPosition(openPos);
             active = false;
+        } else {
+            //claw.setPosition(closedPos);
+            active = true;
         }
     }
 }
