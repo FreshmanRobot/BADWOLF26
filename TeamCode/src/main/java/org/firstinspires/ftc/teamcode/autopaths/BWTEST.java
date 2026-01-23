@@ -29,172 +29,6 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 @Configurable
 public class BWTEST extends OpMode {
 
-
-    private Follower follower;
-    private Timer pathTimer, actionTimer, opmodeTimer;
-    private int pathState;
-
-    // Example subsystems — rename to match your robot
-    private DcMotor shooter, shooter2, intakeMotor;
-
-    private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
-    private DcMotorEx shooterEx;
-    private Servo clawServo = null;
-    private Servo leftHoodServo = null;
-    private Servo gateServo = null;
-
-    // Gate/Intake constants - UPDATED POSITIONS
-    private static final double GATE_OPEN = 0.28;
-    private static final double GATE_CLOSED = 0.45;
-    private static final long INTAKE_DURATION_MS = 1200;
-    private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
-    private static final double INTAKE_SEQUENCE_POWER = 1.0;
-
-    private double targetRPM= 2500.0;
-    private boolean atTargetLast = false;
-
-    private double leftHoodPosition = 0.9;
-
-    // Claw constants
-    private static final double CLAW_OPEN = 0.2;
-    private static final double CLAW_CLOSED = 0.63;
-    private static final long CLAW_CLOSE_MS = 500L;
-
-    FlywheelController flywheel;
-    ClawController clawController;
-    GateController gateController;
-
-    @Override
-    public void init() {
-        follower = Constants.createFollower(hardwareMap);
-
-        // 2. RESET WHEELS (RECALIBRATE DEAD WHEELS)
-        try {
-            // Reset drive encoders (assuming typical 4-motor drive)
-            DcMotorEx fL = hardwareMap.get(DcMotorEx.class, "leftFront");
-            DcMotorEx fR = hardwareMap.get(DcMotorEx.class, "rightFront");
-            DcMotorEx bL = hardwareMap.get(DcMotorEx.class, "leftBack");
-            DcMotorEx bR = hardwareMap.get(DcMotorEx.class, "rightBack");
-
-            fL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            fR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            bL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            bR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-            fL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            fR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            bL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            bR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        } catch (Exception e) {
-            telemetry.addLine("Drive reset failed, checking names...");
-        }
-
-        //shooters
-        try {
-            shooter = hardwareMap.get(DcMotor.class, "shooter");
-            shooter.setDirection(DcMotor.Direction.FORWARD);
-            shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            shooter.setPower(0.0);
-
-            shooter2 = hardwareMap.get(DcMotor.class, "shooter2");
-            shooter2.setDirection(DcMotor.Direction.REVERSE);
-            shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            shooter2.setPower(0.0);
-
-        } catch (Exception e) {
-        }
-
-        // --- Intake & compression hardware (same names as teleop) ---
-        try {
-            intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
-            clawServo = hardwareMap.get(Servo.class, "clawServo");
-            clawServo.setPosition(CLAW_CLOSED);
-            leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
-            leftHoodServo.setPosition(leftHoodPosition);
-            gateServo = hardwareMap.get(Servo.class, "gateServo");
-
-            // Direction per request
-            intakeMotor.setDirection(DcMotor.Direction.REVERSE);
-
-            // Set defaults (same as teleop off state)
-            intakeMotor.setPower(0.0);
-
-        } catch (Exception e) {
-        }
-
-
-        clawController = new ClawController(clawServo, CLAW_OPEN, CLAW_CLOSED, CLAW_CLOSE_MS);
-        gateController = new GateController(
-                gateServo, intakeMotor,
-                GATE_OPEN, GATE_CLOSED,
-                INTAKE_DURATION_MS, CLAW_TRIGGER_BEFORE_END_MS,
-                INTAKE_SEQUENCE_POWER
-        );
-
-        // Initialize at the Open position
-        gateController.setGateClosed(false);
-        gateServo.setPosition(GATE_OPEN);
-
-        // Try to obtain a voltage sensor if available (optional)
-        VoltageSensor voltageSensor = null;
-        try {
-            if (hardwareMap.voltageSensor.iterator().hasNext()) {
-                voltageSensor = hardwareMap.voltageSensor.iterator().next();
-            }
-        } catch (Exception ignored) {
-        }
-
-
-        follower.setPose(new Pose(20, 122, Math.toRadians(135)));
-
-        pathTimer = new Timer();
-        opmodeTimer = new Timer();
-        opmodeTimer.resetTimer();
-        buildPaths();
-        follower.setStartingPose(startPose);
-
-
-        flywheel = new FlywheelController(shooterEx, shooter2, telemetry, voltageSensor);
-        flywheel.setTargetRpm(targetRPM);
-        flywheel.setShooterOn(true);
-
-        telemetry.addLine("BWTEST Initialized");
-        telemetry.update();
-    }
-
-    /** This method is called continuously after Init while waiting for "play". **/
-    @Override
-    public void init_loop() {}
-
-    @Override
-    public void start() {
-        opmodeTimer.resetTimer();
-        flywheel.setTargetRpm(targetRPM);
-        shooterEx.setDirection(DcMotor.Direction.FORWARD);
-        shooter2.setDirection(DcMotor.Direction.REVERSE);
-        flywheel.toggleShooterOn();
-        setPathState(0);
-    }
-
-    @Override
-    public void loop() {
-        // These loop the movements of the robot, these must be called continuously in order to work
-        follower.update();
-        autonomousPathUpdate();
-        // Feedback to Driver Hub for debugging
-        telemetry.addData("path state", pathState);
-        telemetry.addData("x", follower.getPose().getX());
-        telemetry.addData("y", follower.getPose().getY());
-        telemetry.addData("heading", follower.getPose().getHeading());
-        telemetry.update();
-    }
-
-    // Simple sleep helper
-    private void sleep(long ms) {
-        try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
-    }
-
-
     private final Pose startPose  = new Pose(20, 122, Math.toRadians(135));
     private final Pose scorePose  = new Pose(48, 96, Math.toRadians(130));
 
@@ -384,6 +218,172 @@ public class BWTEST extends OpMode {
         pathState = pState;
         pathTimer.resetTimer();
     }
+
+
+    private Follower follower;
+    private Timer pathTimer, actionTimer, opmodeTimer;
+    private int pathState;
+
+    // Example subsystems — rename to match your robot
+    private DcMotor shooter, shooter2, intakeMotor;
+
+    private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
+    private Servo clawServo = null;
+    private Servo leftHoodServo = null;
+    private Servo gateServo = null;
+
+    // Gate/Intake constants - UPDATED POSITIONS
+    private static final double GATE_OPEN = 0.28;
+    private static final double GATE_CLOSED = 0.45;
+    private static final long INTAKE_DURATION_MS = 1200;
+    private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
+    private static final double INTAKE_SEQUENCE_POWER = 1.0;
+
+    private double targetRPM= 2500.0;
+    private boolean atTargetLast = false;
+
+    private double leftHoodPosition = 0.9;
+
+    // Claw constants
+    private static final double CLAW_OPEN = 0.2;
+    private static final double CLAW_CLOSED = 0.63;
+    private static final long CLAW_CLOSE_MS = 500L;
+
+    FlywheelController flywheel;
+    ClawController clawController;
+    GateController gateController;
+
+    @Override
+    public void init() {
+        follower = Constants.createFollower(hardwareMap);
+        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
+
+        // 2. RESET WHEELS (RECALIBRATE DEAD WHEELS)
+        try {
+            // Reset drive encoders (assuming typical 4-motor drive)
+            DcMotor fL = hardwareMap.get(DcMotor.class, "leftFront");
+            DcMotor fR = hardwareMap.get(DcMotor.class, "rightFront");
+            DcMotor bL = hardwareMap.get(DcMotor.class, "leftBack");
+            DcMotor bR = hardwareMap.get(DcMotor.class, "rightBack");
+
+            fL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            fR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            bL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            bR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+            fL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            fR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            bL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            bR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        } catch (Exception e) {
+            telemetry.addLine("Drive reset failed, checking names...");
+        }
+
+        //shooters
+        try {
+            shooter = hardwareMap.get(DcMotor.class, "shooter");
+            shooter.setDirection(DcMotor.Direction.FORWARD);
+            shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            shooter.setPower(0.0);
+
+            shooter2 = hardwareMap.get(DcMotor.class, "shooter2");
+            shooter2.setDirection(DcMotor.Direction.REVERSE);
+            shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            shooter2.setPower(0.0);
+
+        } catch (Exception e) {
+        }
+
+        // --- Intake & compression hardware (same names as teleop) ---
+        try {
+            intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
+            clawServo = hardwareMap.get(Servo.class, "clawServo");
+            clawServo.setPosition(CLAW_CLOSED);
+            leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
+            leftHoodServo.setPosition(leftHoodPosition);
+            gateServo = hardwareMap.get(Servo.class, "gateServo");
+
+            // Direction per request
+            intakeMotor.setDirection(DcMotor.Direction.REVERSE);
+
+            // Set defaults (same as teleop off state)
+            intakeMotor.setPower(0.0);
+
+        } catch (Exception e) {
+        }
+
+
+        clawController = new ClawController(clawServo, CLAW_OPEN, CLAW_CLOSED, CLAW_CLOSE_MS);
+        gateController = new GateController(
+                gateServo, intakeMotor,
+                GATE_OPEN, GATE_CLOSED,
+                INTAKE_DURATION_MS, CLAW_TRIGGER_BEFORE_END_MS,
+                INTAKE_SEQUENCE_POWER
+        );
+
+        // Initialize at the Open position
+        gateController.setGateClosed(false);
+        gateServo.setPosition(GATE_OPEN);
+
+        // Try to obtain a voltage sensor if available (optional)
+        VoltageSensor voltageSensor = null;
+        try {
+            if (hardwareMap.voltageSensor.iterator().hasNext()) {
+                voltageSensor = hardwareMap.voltageSensor.iterator().next();
+            }
+        } catch (Exception ignored) {
+        }
+
+
+        follower.setPose(new Pose(20, 122, Math.toRadians(135)));
+
+        pathTimer = new Timer();
+        opmodeTimer = new Timer();
+        opmodeTimer.resetTimer();
+        buildPaths();
+        follower.setStartingPose(startPose);
+
+
+        flywheel = new FlywheelController(shooter, shooter2, telemetry, voltageSensor);
+        flywheel.setTargetRpm(targetRPM);
+        flywheel.setShooterOn(true);
+
+        telemetry.addLine("BWTEST Initialized");
+        telemetry.update();
+    }
+
+    /** This method is called continuously after Init while waiting for "play". **/
+    @Override
+    public void init_loop() {}
+
+    @Override
+    public void start() {
+        opmodeTimer.resetTimer();
+        flywheel.setTargetRpm(targetRPM);
+        shooter.setDirection(DcMotor.Direction.FORWARD);
+        shooter2.setDirection(DcMotor.Direction.REVERSE);
+        flywheel.toggleShooterOn();
+        setPathState(0);
+    }
+
+    @Override
+    public void loop() {
+        // These loop the movements of the robot, these must be called continuously in order to work
+        follower.update();
+        autonomousPathUpdate();
+        // Feedback to Driver Hub for debugging
+        telemetry.addData("path state", pathState);
+        telemetry.addData("x", follower.getPose().getX());
+        telemetry.addData("y", follower.getPose().getY());
+        telemetry.addData("heading", follower.getPose().getHeading());
+        telemetry.update();
+    }
+
+    // Simple sleep helper
+    private void sleep(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
+    }
+
 
 
 }

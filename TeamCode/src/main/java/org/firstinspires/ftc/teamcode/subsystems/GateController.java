@@ -46,7 +46,7 @@ public class GateController {
     }
 
     /** Returns true once when it’s time to trigger the claw during the auto sequence. */
-    public boolean update(long nowMs) {
+    public boolean f(long nowMs) {
         boolean shouldTriggerClaw = false;
         if (state == GateCycleState.OPEN_INTAKE) {
             long elapsed = nowMs - startMs;

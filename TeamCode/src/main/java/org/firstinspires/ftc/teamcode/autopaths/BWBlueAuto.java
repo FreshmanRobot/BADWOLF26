@@ -10,17 +10,19 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
-import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.Flywheel;
-import org.firstinspires.ftc.teamcode.subsystems.TurretController;
+import org.firstinspires.ftc.teamcode.subsystems.ClawController;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelController;
+import org.firstinspires.ftc.teamcode.subsystems.GateController;
+
 
 /**
  * ExperimentalPedroAuto (improved PRE_ACTION pose handling + fallback)
@@ -36,15 +38,15 @@ import org.firstinspires.ftc.teamcode.subsystems.TurretController;
  *  - When path 4, path 7 or path 10 starts, run intake for a timed 1.0s and then stop.
  *  - PRE_ACTION_WAIT_SECONDS reduced by 0.5s (from 0.8 to 0.3).
  */
-@Autonomous(name = "BW1 Blue Side 12 Ball", group = "Autonomous")
+@Autonomous(name = "A BW BLUE 12 BALL AUTO", group = "Autonomous")
 @Configurable
-public class BadWolfAuto extends OpMode {
+public class BWBlueAuto extends OpMode {
 
     private TelemetryManager panelsTelemetry;
     public Follower follower;
     private Paths paths;
 
-//for heading convergence
+    //for heading convergence
     private static final double SHOOT_HEADING_RAD = Math.toRadians(130);
     private static final double HEADING_TOLERANCE_RAD = Math.toRadians(3); // 2–4° is good
 
@@ -66,12 +68,14 @@ public class BadWolfAuto extends OpMode {
     private static final double TIMED_INTAKE_SECONDS = 0.7; // run intake for 1 second when path4, path7 or path10 starts
     private boolean timedIntakeActive = false;
 
+    private double targetRPM = 3000;
+
     // Claw action state & timing (and positions)
     private long clawActionStartMs = 0L;
     private static final long CLAW_CLOSE_MS = 250L; // duration to hold claw closed
 
-    private static final double CLAW_CLOSED_POS = 0.0; // start CLOSED
-    private static final double CLAW_OPEN_POS = 1.0;   // open to push ball
+    private static final double CLAW_CLOSED = 0.63; // start CLOSED
+    private static final double CLAW_OPEN = 0.2;   // open to push ball
     // Pre-action (delay before starting intake/claw) timer
     private Timer preActionTimer;
     private static final double PRE_ACTION_WAIT_SECONDS = 0.3; // lowered by 0.5s from 0.8
@@ -93,8 +97,10 @@ public class BadWolfAuto extends OpMode {
     private DcMotor shooterMotor, shooter2;
     private boolean shooterOn = false;
 
-    private static final double maxRPM = 5000;
-    private static final double targetRPM = 2000; // close-mode target
+    FlywheelController flywheel;
+    GateController gateController;
+    ClawController clawController;
+
 
     private long lastShooterPosition = 0;
     private long lastShooterTime = 0;
@@ -102,9 +108,9 @@ public class BadWolfAuto extends OpMode {
     // Intake + compression hardware (from teleop)
     private DcMotor intakeMotor;
     private CRServo transferMotor;   // NEW continuous servo
-
-    private Servo leftHoodServo;
-    private static final double LEFT_HOOD_POSITION = 0.12;
+    private Servo gateServo = null;
+    private Servo leftHoodServo = null;
+    private static final double LEFT_HOOD_POSITION = 0.9;
 
 
     //wheel hardware
@@ -113,10 +119,14 @@ public class BadWolfAuto extends OpMode {
     // Claw servo
     private Servo clawServo;
 
-    // Intake/compression "on" values (match teleop right-trigger behavior)
+    // Intake/gate "on" values (match teleop right-trigger behavior)
     private static final double INTAKE_ON_POWER = 1.0;
-    private static final double TRANSFER_ON = 1.0;
-    private static final double TRANSFER_OFF = 0.0;
+    private static final double GATE_OPEN = 0.28;
+    private static final double GATE_CLOSED = 0.60;
+
+    private static final long INTAKE_DURATION_MS = 1200;
+    private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
+    private static final double INTAKE_SEQUENCE_POWER = 1.0;
     private int intakeSegmentEnd = -1;
 
     // Shoot pose constants and tolerance - used to ensure PRE_ACTION timer starts only when robot reaches pose
@@ -125,7 +135,7 @@ public class BadWolfAuto extends OpMode {
     private static final double START_POSE_TOLERANCE_IN = 6.0; // increased tolerance to avoid tiny-miss stalls
 
 
-    public BadWolfAuto() {}
+    public BWBlueAuto() {}
 
     @Override
     public void init() {
@@ -148,7 +158,7 @@ public class BadWolfAuto extends OpMode {
 
         //wheel hardware
         try {
-            shooterMotor = hardwareMap.get(DcMotor.class, "shooter");
+            shooterMotor = hardwareMap.get(DcMotorEx.class, "shooter");
             shooterMotor.setDirection(DcMotor.Direction.FORWARD);
             shooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             shooterMotor.setPower(0.0);
@@ -173,15 +183,13 @@ public class BadWolfAuto extends OpMode {
         // --- Intake & compression hardware (same names as teleop) ---
         try {
             intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
-            transferMotor = hardwareMap.get(CRServo.class, "transfer");
 
             // Direction per request
             intakeMotor.setDirection(DcMotor.Direction.REVERSE);
 
             // Set defaults (same as teleop off state)
             intakeMotor.setPower(0.0);
-            transferMotor.setDirection(CRServo.Direction.REVERSE);
-            transferMotor.setPower(TRANSFER_OFF);
+            gateServo.setPosition(GATE_CLOSED);
 
         } catch (Exception e) {
             panelsTelemetry.debug("Init", "Intake/compression mapping failed: " + e.getMessage());
@@ -191,7 +199,7 @@ public class BadWolfAuto extends OpMode {
         try {
             clawServo = hardwareMap.get(Servo.class, "clawServo");
             // ensure default open position as teleop uses 0.63 for open
-            clawServo.setPosition(CLAW_OPEN_POS);
+            clawServo.setPosition(CLAW_OPEN);
         } catch (Exception e) {
             panelsTelemetry.debug("Init", "Claw servo mapping failed: " + e.getMessage());
         }
@@ -203,9 +211,35 @@ public class BadWolfAuto extends OpMode {
             panelsTelemetry.debug("Init", "Hood map fail: " + e.getMessage());
         }
 
+        gateServo = hardwareMap.get(Servo.class, "gateServo");
+
         panelsTelemetry.debug("Status", "Initialized");
         panelsTelemetry.update(telemetry);
+
+        VoltageSensor voltageSensor = null;
+        try {
+            if (hardwareMap.voltageSensor.iterator().hasNext()) {
+                voltageSensor = hardwareMap.voltageSensor.iterator().next();
+            }
+        } catch (Exception ignored) {}
+
+        // Create FlywheelController: primary (DcMotorEx), secondary (DcMotor), telemetry, voltageSensor (may be null)
+        flywheel = new FlywheelController(shooterMotor, shooter2, telemetry, voltageSensor);
+        flywheel.setTargetRpm(targetRPM);
+        flywheel.setShooterOn(true);
+
+        clawController = new ClawController(clawServo, CLAW_OPEN, CLAW_CLOSED, CLAW_CLOSE_MS);
+        gateController = new GateController(
+                gateServo, intakeMotor,
+                GATE_OPEN, GATE_CLOSED,
+                INTAKE_DURATION_MS, CLAW_TRIGGER_BEFORE_END_MS,
+                INTAKE_SEQUENCE_POWER
+        );
+
+        // Initialize at the Open position
+        gateServo.setPosition(GATE_CLOSED);
     }
+
 
     @Override
     public void init_loop() {
@@ -215,14 +249,13 @@ public class BadWolfAuto extends OpMode {
 
     @Override
     public void start() {
-
+        flywheel.setTargetRpm(targetRPM);
         // Set starting pose to the start point of Path1 (and heading to match interpolation start)
         follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
 
         // Start spinner and turret references
         if (shooterMotor != null) {
-            shooterMotor.setPower(1.0);
-            shooter2.setPower(1.0);
+            flywheel.setShooterOn(true);
             shooterOn = true;
             shooterWaitStartMs = System.currentTimeMillis();
         }
@@ -237,6 +270,10 @@ public class BadWolfAuto extends OpMode {
 
     @Override
     public void loop() {
+        //flywheel update
+        flywheel.setTargetRpm(targetRPM);
+        flywheel.update();
+
         // Keep Pedro Pathing updated
         follower.update();
 
@@ -273,7 +310,7 @@ public class BadWolfAuto extends OpMode {
         if (shooter2 != null)shooter2.setPower(0.0);
         // Ensure intake off and claw open
         stopIntake();
-        if (clawServo != null) clawServo.setPosition(CLAW_OPEN_POS);
+        if (clawServo != null) clawServo.setPosition(CLAW_OPEN);
         state = AutoState.FINISHED;
     }
 
@@ -281,9 +318,7 @@ public class BadWolfAuto extends OpMode {
     private void startIntake() {
         try {
             if (intakeMotor != null) intakeMotor.setPower(INTAKE_ON_POWER);
-            //if (leftCompressionServo != null) leftCompressionServo.setPosition(LEFT_COMPRESSION_ON);
-            //if (rightCompressionServo != null) rightCompressionServo.setPosition(RIGHT_COMPRESSION_ON);
-            if(transferMotor != null) transferMotor.setPower(TRANSFER_ON);
+
         } catch (Exception e) {
             panelsTelemetry.debug("Intake", "startIntake error: " + e.getMessage());
         }
@@ -294,7 +329,6 @@ public class BadWolfAuto extends OpMode {
             if (intakeMotor != null) intakeMotor.setPower(0.0);
             //if (leftCompressionServo != null) leftCompressionServo.setPosition(LEFT_COMPRESSION_OFF);
             //if (rightCompressionServo != null) rightCompressionServo.setPosition(RIGHT_COMPRESSION_OFF);
-            if (transferMotor != null) transferMotor.setPower(TRANSFER_OFF);
         } catch (Exception e) {
             panelsTelemetry.debug("Intake", "stopIntake error: " + e.getMessage());
         }
@@ -488,23 +522,23 @@ public class BadWolfAuto extends OpMode {
                         stopIntake();
                     }
                     // begin claw action (close)
-                    if (clawServo != null) clawServo.setPosition(CLAW_CLOSED_POS); // close
-                    clawActionStartMs = System.currentTimeMillis();
+                    //if (clawServo != null) clawServo.setPosition(CLAW_CLOSED); // close
+                    //clawActionStartMs = System.currentTimeMillis();
                     state = AutoState.CLAW_ACTION;
                 }
                 break;
 
             case CLAW_ACTION:
-                if (System.currentTimeMillis() >= clawActionStartMs + CLAW_CLOSE_MS) {
+                gateController.startIntakeSequence(nowMs);
+                //if (System.currentTimeMillis() >= clawActionStartMs + CLAW_CLOSE_MS) {
                     // open claw and continue to nextPathIndex
-                    if (clawServo != null) clawServo.setPosition(CLAW_OPEN_POS); // open
                     if (nextPathIndex > 0 && nextPathIndex <= 11) {
                         startPath(nextPathIndex);
                         nextPathIndex = -1;
                     } else {
                         state = AutoState.FINISHED;
                     }
-                }
+                //}
                 break;
 
             case FINISHED:

@@ -110,7 +110,6 @@ public class BadWolf extends LinearOpMode {
         );
 
         // Initialize at the Open position
-        gateController.setGateClosed(false);
         gateServo.setPosition(GATE_CLOSED);
 
         // Try to obtain a voltage sensor if available (optional)
