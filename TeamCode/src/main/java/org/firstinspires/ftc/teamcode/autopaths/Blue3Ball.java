@@ -43,7 +43,7 @@ public class Blue3Ball extends LinearOpMode {
     private Servo clawServo = null;
 
     // Shooter RPM estimation (encoder ticks -> RPM) - kept for telemetry only
-    private static final double TICKS_PER_REV = 537.6;
+    private static final double TICKS_PER_REV = 28.0;
     private double currentRPM = 0.0;
     private int lastShooterPosition = 0;
     private long lastShooterTimeMs = 0L;
