@@ -1,3 +1,4 @@
+// Java
 package org.firstinspires.ftc.teamcode.teleop;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -8,7 +9,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.GateController;
@@ -26,19 +26,15 @@ public class HORSoperation extends LinearOpMode {
     private Servo leftHoodServo = null;
     private Servo gateServo = null;
 
-    // Gate/Intake constants
     private static final double GATE_OPEN = 0.28;
     private static final double GATE_CLOSED = 0.73;
     private static final long INTAKE_DURATION_MS = 1200;
     private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
     private static final double INTAKE_SEQUENCE_POWER = -1.0;
 
-    // shooter state (we will drive it via FlywheelController)
     private FlywheelController flywheel;
 
     private double targetRPM = 3000;
-
-    private double rpmScale = 1.0;
     private boolean xPressedLast = false;
     private boolean yPressedLast = false;
 
@@ -49,34 +45,24 @@ public class HORSoperation extends LinearOpMode {
     private boolean bPressedLast = false;
 
     private boolean atTargetLast = false;
-    private boolean rumbling = false;
-    private long rumbleEndTimeMs = 0L;
     private static final long RUMBLE_DURATION_MS = 1000L;
 
-    // hood/claw timing
     private double leftHoodPosition = 0.9;
 
-    // Claw constants
     private static final double CLAW_OPEN = 0.2;
     private static final double CLAW_CLOSED = 0.63;
     private static final long CLAW_CLOSE_MS = 500L;
 
-    // precision driving
     private double driveScale = 1.0;
     private static final double PRECISION_SCALE = 0.25;
     private boolean leftBumperLast = false;
     private boolean rightBumperLast = false;
 
-    // ============ IMU Align Logic ============
+    // ============ Simplified IMU Align ============
     private IMU imu = null;
     private double imuAlignAngle = 0.0;
     private boolean aPressedLast = false;
-    private boolean xImuAlignActive = false; // acts as an "aligning" state for X button/IMU align
-
-    // ----- IMU align control internals -----
-    // These allow for braking strength and tolerance logic
-    private double lastImuError = 0;
-    private double lastImuTime = 0;
+    private boolean xImuAlignActive = false;
 
     @Override
     public void runOpMode() {
@@ -148,59 +134,37 @@ public class HORSoperation extends LinearOpMode {
 
         waitForStart();
 
-        // IMU align state variables
+        // IMU align timer
         ElapsedTime alignTimer = new ElapsedTime();
 
-        // IMU align controller parameters
-        final double kP = 0.02;      // Proportional gain
-        final double kD = 0.003;     // Derivative gain for damping
-        final double minPower = 0.07;  // Minimum power to overcome friction
-        final double angleTolerance = 1.5; // Degrees, when to stop
-        final double velocityTolerance = 0.2; // Not used as encoder velocity not available on DcMotor (non-Ex)
-        final double alignTimeout = 1.5; // seconds
+        // Align params: simple P only, no braking/derivative/min power
+        final double kP = 0.02;
+        final double angleTolerance = 2.5;
+        final double alignTimeout = 0.5;
 
         while (opModeIsActive()) {
             long nowMs = System.currentTimeMillis();
 
-            // ---------- Relocalize (A) - reference heading store/restore --------------
+            // Store reference heading on A
             boolean aNow = gamepad1.a || gamepad2.a;
             if (aNow && !aPressedLast && imu != null) {
                 imuAlignAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
             }
             aPressedLast = aNow;
 
-            // ---------- IMU Align (X) ---------------
+            // Start align on X (reset control points)
             boolean xNow = gamepad1.x || gamepad2.x;
-            // Enter IMU align on X pressed (not held)
             if (xNow && !xPressedLast && imu != null) {
                 xImuAlignActive = true;
                 alignTimer.reset();
-                lastImuError = 0;
-                lastImuTime = alignTimer.seconds();
             }
             xPressedLast = xNow;
+
             if (xImuAlignActive && imu != null) {
-                // --- Improved align logic with P+D controller and braking ---
-                double currentTime = alignTimer.seconds();
                 double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
                 double error = imuAlignAngle - imuAngle;
+                double turnPower = kP * error;
 
-                // Derivative calculation for braking (damping)
-                double deltaTime = currentTime - lastImuTime;
-                double derivative = 0;
-                if (deltaTime > 0) derivative = (error - lastImuError) / deltaTime;
-
-                double turnPower = kP * error + kD * derivative;
-
-                // Clamp for minimum power for large error, but stop for small error
-                if (Math.abs(turnPower) < minPower && Math.abs(error) > angleTolerance) {
-                    turnPower = Math.signum(turnPower) * minPower;
-                }
-                if (Math.abs(error) < angleTolerance) {
-                    turnPower = 0;
-                }
-
-                // Apply rotation power
                 frontLeftDrive.setPower(-turnPower);
                 backLeftDrive.setPower(-turnPower);
                 frontRightDrive.setPower(turnPower);
@@ -209,25 +173,19 @@ public class HORSoperation extends LinearOpMode {
                 telemetry.addData("IMU Angle", imuAngle);
                 telemetry.addData("Target Angle", imuAlignAngle);
                 telemetry.addData("Error", error);
-                telemetry.addData("Turn Power", turnPower);
                 telemetry.update();
 
-                // Stop aligning if tolerance reached or timeout
-                if (Math.abs(error) < angleTolerance || alignTimer.seconds() > alignTimeout) {
-                    // Brake robot at heading
+                if (Math.abs(error) <= angleTolerance || alignTimer.seconds() > alignTimeout) {
                     frontLeftDrive.setPower(0);
                     backLeftDrive.setPower(0);
                     frontRightDrive.setPower(0);
                     backRightDrive.setPower(0);
-                    sleep(150); // Brief brake to stabilize
                     xImuAlignActive = false;
                 }
-                lastImuError = error;
-                lastImuTime = currentTime;
-                continue; // skip rest of loop when aligning
+                continue;
             }
 
-            // DRIVE LOGIC (usual)
+            // DRIVE
             double y = -gamepad1.left_stick_y;
             double x = gamepad1.left_stick_x;
             double rx = gamepad1.right_stick_x;
@@ -251,7 +209,7 @@ public class HORSoperation extends LinearOpMode {
             frontRightDrive.setPower(frontRightPower * driveScale);
             backRightDrive.setPower(backRightPower * driveScale);
 
-            // SHOOTER CONTROLS (same gamepad mapping preserved)
+            // SHOOTER CONTROLS
             boolean dpadDownNow = gamepad1.dpad_down || gamepad2.dpad_down;
             if (dpadDownNow && !dpadDownLast) {
                 shooterEx.setDirection(DcMotor.Direction.FORWARD);
@@ -282,7 +240,7 @@ public class HORSoperation extends LinearOpMode {
             }
             dpadUpLast = dpadUpNow;
 
-            // INTAKE (transfer motor removed)
+            // INTAKE
             if (!gateController.isBusy()) {
                 if (gamepad1.right_trigger > 0.1 || gamepad2.right_trigger > 0.1) {
                     intakeMotor.setDirection(DcMotor.Direction.REVERSE);
@@ -295,33 +253,30 @@ public class HORSoperation extends LinearOpMode {
                 }
             }
 
-            // GATE TOGGLE (B Button - Gamepad 1 or 2)
+            // GATE TOGGLE
             boolean bNow = gamepad1.b || gamepad2.b;
             if (bNow && !bPressedLast && !gateController.isBusy()) {
                 gateController.toggleGate();
             }
             bPressedLast = bNow;
 
-            // INTAKE AUTO SEQUENCE (Y Button)
+            // INTAKE AUTO SEQUENCE
             boolean yNow = gamepad1.y || gamepad2.y;
             if (yNow && !yPressedLast && !gateController.isBusy()) {
                 gateController.startIntakeSequence(nowMs);
             }
             yPressedLast = yNow;
 
-            // Update controllers
+            // Gate/claw update
             boolean shouldTriggerClaw = gateController.update(nowMs);
             if (shouldTriggerClaw) clawController.trigger(nowMs);
 
-            // --- Flywheel PIDF update ---
+            // Flywheel update
             flywheel.setTargetRpm(targetRPM);
             flywheel.update();
 
-            // Rumble at target using FlywheelController isAtTarget()
             boolean atTargetNow = flywheel.isAtTarget();
             if (atTargetNow && !atTargetLast) {
-                rumbling = true;
-                rumbleEndTimeMs = nowMs + RUMBLE_DURATION_MS;
                 gamepad1.rumble((int) RUMBLE_DURATION_MS);
                 gamepad2.rumble((int) RUMBLE_DURATION_MS);
             }
