@@ -24,9 +24,9 @@ import org.firstinspires.ftc.teamcode.subsystems.FlywheelController;
 import org.firstinspires.ftc.teamcode.subsystems.GateController;
 
 /**
- * BWBlueAuto – stabilized heading/pose lock at shoot pose + gate servo fix.
+ * BWBlueAuto – stabilized heading/pose lock at shoot pose + gate servo fix + gate open/close by distance.
  */
-@Autonomous(name = "HORS Operation 12 Ball Blue", group = "Autonomous")
+@Autonomous(name = "A BW BLUE 12 BALL AUTO", group = "Autonomous")
 @Configurable
 public class BWBlueAuto extends OpMode {
 
@@ -104,6 +104,11 @@ public class BWBlueAuto extends OpMode {
     private static final double SHOOT_POSE_Y = 96.0;
     private static final double START_POSE_TOLERANCE_IN = 6.0;
 
+    // Gate distance-based control (like BluePedroAuto)
+    private static final double GATE_OPEN_TOLERANCE_IN = 9.0;
+    private static final double GATE_CLOSE_TOLERANCE_IN = 10.0;
+    private boolean gateClosed = true;
+
     public BWBlueAuto() {}
 
     @Override
@@ -126,6 +131,7 @@ public class BWBlueAuto extends OpMode {
         try {
             gateServo = hardwareMap.get(Servo.class, "gateServo");
             gateServo.setPosition(GATE_CLOSED);
+            gateClosed = true;
         } catch (Exception e) {
             panelsTelemetry.debug("Init", "Gate servo mapping failed: " + e.getMessage());
         }
@@ -201,6 +207,7 @@ public class BWBlueAuto extends OpMode {
                     INTAKE_SEQUENCE_POWER
             );
             gateServo.setPosition(GATE_CLOSED);
+            gateClosed = true;
         }
 
         panelsTelemetry.debug("Status", "Initialized");
@@ -231,6 +238,9 @@ public class BWBlueAuto extends OpMode {
 
         follower.update();
 
+        // Distance-based gate control (like BluePedroAuto)
+        updateGate();
+
         runStateMachine(nowMs);
 
         if (gateController != null) {
@@ -253,6 +263,7 @@ public class BWBlueAuto extends OpMode {
         stopIntake();
         if (clawServo != null) clawServo.setPosition(CLAW_OPEN);
         if (gateServo != null) gateServo.setPosition(GATE_CLOSED);
+        gateClosed = true;
         state = AutoState.FINISHED;
     }
 
@@ -443,6 +454,25 @@ public class BWBlueAuto extends OpMode {
             case IDLE:
             default:
                 break;
+        }
+    }
+
+    // Gate open/close by distance to shoot pose
+    private void updateGate() {
+        if (gateServo == null) return;
+        double dist = distanceToShootPose();
+        try {
+            if (dist <= GATE_OPEN_TOLERANCE_IN && gateClosed) {
+                gateServo.setPosition(GATE_OPEN);
+                gateClosed = false;
+                panelsTelemetry.debug("Gate", "Opened (dist=" + String.format("%.2f", dist) + ")");
+            } else if (dist >= GATE_CLOSE_TOLERANCE_IN && !gateClosed) {
+                gateServo.setPosition(GATE_CLOSED);
+                gateClosed = true;
+                panelsTelemetry.debug("Gate", "Closed (dist=" + String.format("%.2f", dist) + ")");
+            }
+        } catch (Exception e) {
+            panelsTelemetry.debug("Gate", "updateGate error: " + e.getMessage());
         }
     }
 
