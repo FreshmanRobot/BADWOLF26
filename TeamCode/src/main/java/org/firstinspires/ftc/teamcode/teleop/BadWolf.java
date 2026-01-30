@@ -344,7 +344,7 @@ public class BadWolf extends LinearOpMode {
 
             // CLAW MANUAL (X Button)
             boolean backNow = gamepad1.back || gamepad2.back;
-            if (xNow && !backPressedLast) clawController.trigger(nowMs);
+            if (backNow && !backPressedLast) clawController.trigger(nowMs);
             backPressedLast = backNow;
             clawController.update(nowMs);
 
