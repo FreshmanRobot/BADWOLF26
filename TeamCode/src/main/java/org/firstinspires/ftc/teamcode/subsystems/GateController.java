@@ -1,7 +1,6 @@
 // Java
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -16,7 +15,7 @@ public class GateController {
     private final long clawTriggerBeforeEndMs;
     private final double intakePower;
 
-    public boolean gateClosed = false;
+    private boolean gateClosed = false;
 
     // Intake sequence state
     private boolean busy = false;
@@ -38,13 +37,14 @@ public class GateController {
         this.clawTriggerBeforeEndMs = clawTriggerBeforeEndMs;
         this.intakePower = intakePower;
     }
+
     public void setGateClosed(boolean closed) {
         gateClosed = closed;
         gateServo.setPosition(closed ? gateClosedPos : gateOpenPos);
     }
+
     public void toggleGate() {
         setGateClosed(!gateClosed);
-        //led.triggerLed(gateClosed);
     }
 
     public boolean isBusy() {
