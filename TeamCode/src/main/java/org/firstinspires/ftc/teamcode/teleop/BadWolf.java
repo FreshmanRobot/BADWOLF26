@@ -49,7 +49,7 @@ public class BadWolf extends LinearOpMode {
     // shooter state (we will drive it via FlywheelController)
     private FlywheelController flywheel;
 
-    private double targetRPM = 3000;
+    private double targetRPM = 3300;
 
     private double rpmScale = 1.0;
 
@@ -70,7 +70,7 @@ public class BadWolf extends LinearOpMode {
     private static final long RUMBLE_DURATION_MS = 1000L;
 
     // hood/claw timing
-    private double leftHoodPosition = 0.9;
+    private double leftHoodPosition = 0.43;
 
     // Claw constants
     private static final double CLAW_OPEN = 0.2;
@@ -135,7 +135,7 @@ public class BadWolf extends LinearOpMode {
         telemetry.update();
 
         // Initialize controllers
-        targetRPM = 3000;
+        targetRPM = 3300;
         clawServo.setPosition(0.0);
         leftHoodServo.setPosition(leftHoodPosition);
 
