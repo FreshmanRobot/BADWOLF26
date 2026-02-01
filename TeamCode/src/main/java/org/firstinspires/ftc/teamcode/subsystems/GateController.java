@@ -15,7 +15,7 @@ public class GateController {
     private final long clawTriggerBeforeEndMs;
     private final double intakePower;
 
-    private boolean gateClosed = false;
+    public boolean gateClosed = false;
 
     // Intake sequence state
     private boolean busy = false;

@@ -18,6 +18,9 @@ import org.firstinspires.ftc.teamcode.subsystems.GateController;
 import org.firstinspires.ftc.teamcode.subsystems.ClawController;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelController;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.subsystems.LedController;
+
+import com.qualcomm.robotcore.hardware.LED;
 
 
 @TeleOp(name="A BadWolf Official ", group="Linear OpMode")
@@ -29,7 +32,12 @@ public class BadWolf extends LinearOpMode {
     private Servo clawServo = null;
     private Servo leftHoodServo = null;
     private Servo gateServo = null;
-    
+    public LED backLedR = null;
+    public LED backLedG = null;
+    public LED sideLedR = null;
+    public LED sideLedG = null;
+
+
 
     // Gate/Intake constants - UPDATED POSITIONS
     private static final double GATE_OPEN = 0.28;
@@ -102,6 +110,13 @@ public class BadWolf extends LinearOpMode {
         leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
         gateServo = hardwareMap.get(Servo.class, "gateServo");
 
+        //LEDs
+        backLedR = hardwareMap.get(LED.class, "backLedR");
+        backLedG = hardwareMap.get(LED.class, "backLedG");
+        sideLedR = hardwareMap.get(LED.class, "sideLedR");
+        sideLedG = hardwareMap.get(LED.class, "sideLedG");
+
+
         frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
         backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
         frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
@@ -112,6 +127,7 @@ public class BadWolf extends LinearOpMode {
         // let FlywheelController handle encoder modes; keep shooter2 as no-encoder mirror
         shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+        LedController ledController;
         GateController gateController;
         ClawController clawController;
 
@@ -130,7 +146,7 @@ public class BadWolf extends LinearOpMode {
                 INTAKE_DURATION_MS, CLAW_TRIGGER_BEFORE_END_MS,
                 INTAKE_SEQUENCE_POWER
         );
-
+        ledController = new LedController(backLedR, backLedG, sideLedR, sideLedG);
 
         // Initialize at the Open position
         gateServo.setPosition(GATE_CLOSED);
@@ -142,6 +158,7 @@ public class BadWolf extends LinearOpMode {
                 voltageSensor = hardwareMap.voltageSensor.iterator().next();
             }
         } catch (Exception ignored) {}
+
 
         // Create FlywheelController: primary (DcMotorEx), secondary (DcMotor), telemetry, voltageSensor (may be null)
         flywheel = new FlywheelController(shooterEx, shooter2, telemetry, voltageSensor);
@@ -180,6 +197,7 @@ public class BadWolf extends LinearOpMode {
             boolean aNow = gamepad1.a || gamepad2.a;
             if (aNow && !aPressedLast && imu != null) {
                 imuAlignAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+                telemetry.addData("IMU Align Angle", imuAlignAngle);
             }
             aPressedLast = aNow;
 
@@ -197,14 +215,15 @@ public class BadWolf extends LinearOpMode {
                 // --- Improved align logic with P+D controller and braking ---
                 double currentTime = alignTimer.seconds();
                 double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
-                double error = imuAlignAngle - imuAngle;
+                double error = Math.abs(imuAlignAngle) - Math.abs(imuAngle);
+                double sign = Math.signum(imuAlignAngle - imuAngle);
 
                 // Derivative calculation for braking (damping)
                 double deltaTime = currentTime - lastImuTime;
                 double derivative = 0;
                 if (deltaTime > 0) derivative = (error - lastImuError) / deltaTime;
 
-                double turnPower = kP * error + kD * derivative;
+                double turnPower = (kP * error + kD * derivative)*sign;
 
                 // Clamp for minimum power for large error, but stop for small error
                 if (Math.abs(turnPower) < minPower && Math.abs(error) > angleTolerance) {
@@ -322,6 +341,8 @@ public class BadWolf extends LinearOpMode {
                 gateController.startIntakeSequence(nowMs);
             }
             yPressedLast = yNow;
+
+            ledController.ledState(gateController.gateClosed);
 
             // Update controllers
             boolean shouldTriggerClaw = gateController.update(nowMs);
