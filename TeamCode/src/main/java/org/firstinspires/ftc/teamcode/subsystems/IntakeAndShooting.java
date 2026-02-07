@@ -18,6 +18,7 @@ public class IntakeAndShooting {
     private boolean ballthroughprev = false;
     private int ballcount = 0;
     private int clawtimer = 0;
+    private int fulltimer = 0;
     public boolean finished = false;
 
     public IntakeAndShooting (DcMotor in, DcMotor shoot1, DcMotor shoot2, Servo claw, Servo gate) {
@@ -35,14 +36,17 @@ public class IntakeAndShooting {
         switch (status) {
             case 0:
                 ballcount = 0;
+                fulltimer = 0;
                 power(0,0,Speed,false,true);
                 break;
             case 1:
                 ballcount = 0;
+                fulltimer = 0;
                 power(1,0,Speed,false,true);
                 break;
             case 2:
                 power(1,3100,Speed,true,false);
+                fulltimer++;
                 break;
         }
     }
@@ -50,7 +54,6 @@ public class IntakeAndShooting {
     private void power (double inP, double goalspeed, double speed, boolean clawP, boolean gateP) {
         shoot1.setPower(speed);
         shoot2.setPower(speed);
-
         if (Math.abs(goalspeed-speed) < 100) {
             in.setPower(inP);
         } else {
@@ -87,6 +90,9 @@ public class IntakeAndShooting {
         } else {
             //gate open
             gate.setPosition(0.28);
+        }
+        if (fulltimer > 1500) {
+            finished = true;
         }
     }
 }

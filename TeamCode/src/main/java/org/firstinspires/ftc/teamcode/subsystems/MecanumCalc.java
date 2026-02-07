@@ -69,6 +69,31 @@ public class MecanumCalc {
             //forward
             double EY = FD*Math.acos(Math.toRadians(DW));
 
+            //set to minimum rotation
+            double UA;
+            double BA;
+            double MA;
+            int dirA;
+            if (TW * W < 0) {
+                //if flips across horizontal axis
+                if (TW > 0) {
+                    //target is in upper portion
+                    UA = 180-TW;
+                    BA = 180+W;
+                    dirA = -1;
+                } else {
+                    //target is in lower portion
+                    UA = 180-W;
+                    BA = 180+TW;
+                    dirA = 1;
+                }
+                MA = UA+BA;
+                if (MA < Math.abs(DW)) {
+                    //set new minimum
+                    DW = dirA*MA;
+                }
+            }
+
             //pid (the f can go f itself)
             WPower[3] += DW;
             YPower[3] += EY;
@@ -157,9 +182,9 @@ public class MecanumCalc {
     }
     //and i definitely didnt need three functions
     private void shootPos () {
-        double shootX = 0;
-        double shootY = 0;
-        double shootW = 0;
+        double shootX = 48;
+        double shootY = 96;
+        double shootW = 135;
 
         pointCreator(shootX,shootY,shootW,0);
         pointCreator(shootX,shootY,shootW,2);
