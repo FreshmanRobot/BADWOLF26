@@ -20,6 +20,7 @@ public class EthanDoesASillyLittleCoding extends OpMode{
     OdometryPosition odometryPosition;
     IntakeAndShooting intakeAndShooting;
     Blink182 blink182;
+    String side = "STRAIGHT";
 
     @Override
     public void init() {
@@ -47,20 +48,26 @@ public class EthanDoesASillyLittleCoding extends OpMode{
         //leds
         backLedR = hardwareMap.get(LED.class, "backLedR");
         sideLedR = hardwareMap.get(LED.class, "sideLedR");
-        //uhm
-        mecanumCalc = new MecanumCalc();
-        odometryPosition = new OdometryPosition(frontLeftDrive, backLeftDrive, 0, 0);
-        intakeAndShooting = new IntakeAndShooting(intakeMotor,shooter,shooter2,clawServo,gateServo);
-        blink182 = new Blink182(backLedR, sideLedR);
     }
 
     @Override
     public void init_loop() {
-        //uhhh
+        if (gamepad1.dpad_up) {
+            side = "STRAIGHT";
+        } else if (gamepad1.dpad_left) {
+            side = "BLUE";
+        } else if (gamepad1.dpad_right) {
+            side = "RED";
+        } else if (gamepad1.dpad_down) {
+            side = "TRIANGLE";
+        }
     }
     @Override
     public void start() {
-        //uhhhh
+        mecanumCalc = new MecanumCalc(side);
+        odometryPosition = new OdometryPosition(frontLeftDrive, backLeftDrive, MecanumCalc.SY, MecanumCalc.SX, MecanumCalc.SW);
+        intakeAndShooting = new IntakeAndShooting(intakeMotor,shooter,shooter2,clawServo,gateServo);
+        blink182 = new Blink182(backLedR, sideLedR);
     }
     @Override
     public void loop() {

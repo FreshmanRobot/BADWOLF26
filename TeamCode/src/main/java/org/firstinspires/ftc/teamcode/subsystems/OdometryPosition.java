@@ -26,19 +26,20 @@ public class OdometryPosition {
     private double DY;
     public double D;
 
-    public OdometryPosition (DcMotor OdoY, DcMotor OdoX, double SY, double SX) {
+    public OdometryPosition (DcMotor OdoY, DcMotor OdoX, double SY, double SX, double SW) {
         OY = OdoY;
         OX = OdoX;
         Y = SY;//bau
         X = SX;
+        W = SW;
     }
 
     public void OdoCalc () {
         CY = OY.getCurrentPosition(); //i'm not typing in getCurrentPosition() like seven times
         CX = OX.getCurrentPosition(); //wasting precious mem storage just because my fingers are lazy breh
 
-        DY = YMOD*(CY-PY); //strafe odo change
-        DX = XMOD*(CX-PX); //forward odo change
+        DY = (CY-PY)/YMOD; //strafe odo change
+        DX = (CX-PX)/XMOD; //forward odo change
 
         PY = CY; //X position
         PX = PY; //Y position
@@ -50,8 +51,8 @@ public class OdometryPosition {
 
         //outputs
         W = (W+180)%360 - 180;
-        Y += FD*Math.asin(FA);
-        X += FD*Math.acos(FA);
+        Y += FD*Math.sin(FA);
+        X += FD*Math.cos(FA);
         D = FD;
     }
 

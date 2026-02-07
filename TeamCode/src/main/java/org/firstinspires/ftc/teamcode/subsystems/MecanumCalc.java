@@ -13,11 +13,39 @@ public class MecanumCalc {
     public static double fLPower;
     public static double fRPower;
     public static int status;
+    public static double SX = 20;
+    public static double SY = 122;
+    public static double SW = -135;
 
     //list of points (bruh wha    you forgot to put the points)
     private static double[][] points = {};
-    private void GenPoints () {
-        shootPos();
+    private void GenPoints (String side) {
+        if (side == "RED") {
+            SX = 144-SX;
+            SW = 45;
+        }
+
+        shootPos(side);
+    }
+    private void GenPointsS () {
+        SX = 0;
+        SY = 0;
+        SW = 0;
+        for (int a = 0; a < 5; a++) {
+            pointCreator(0, 48, 0, 0, "BLUE");
+            pointCreator(0, 0, 0, 0, "BLUE");
+        }
+    }
+
+    private void GenPointsT () {
+        SX = 0;
+        SY = 0;
+        SW = 0;
+        for (int a = 0; a < 5; a++) {
+            pointCreator(36, 48, -60, 0, "BLUE");
+            pointCreator(-36, 48, -180, 0, "BLUE");
+            pointCreator(0, 0, 30, 0, "BLUE");
+        }
     }
 
 
@@ -29,8 +57,23 @@ public class MecanumCalc {
     private static int time = 0;
     public static boolean ledon = false;
 
-    public MecanumCalc () {
-        GenPoints();
+    public MecanumCalc (String side) {
+        switch (side) {
+            case "BLUE":
+                GenPoints(side);
+                break;
+            case "RED":
+                GenPoints(side);
+                break;
+            case "STRAIGHT":
+                GenPointsS();
+                break;
+            case "TRIANGLE":
+                GenPointsT();
+                break;
+            default:
+
+        }
     }
 
     public static void calculate(double X, double Y, double W, boolean finished) {
@@ -174,19 +217,30 @@ public class MecanumCalc {
         return(out);
     }
     //bluduzz i probably did *not* need two freaking functions for ts
-    private void pointCreator (double x, double y, double w, double mPower) {
+    private void pointCreator (double x, double y, double w, double mPower, String side) {
         //make array of features
-        double[] pointGroup = {x, y, w, mPower};
+        double[] pointGroup = new double[4];
+        if (side == "BLUE") {
+            pointGroup[0] = x;
+            pointGroup[1] = y;
+            pointGroup[2] = w;
+            pointGroup[3] = mPower;
+        } else {
+            pointGroup[0] = 144-x;
+            pointGroup[1] = y;
+            pointGroup[2] = w;
+            pointGroup[3] = mPower;
+        }
         //call function
         points = arrayMod (points, pointGroup);
     }
     //and i definitely didnt need three functions
-    private void shootPos () {
+    private void shootPos (String side) {
         double shootX = 48;
         double shootY = 96;
         double shootW = 135;
 
-        pointCreator(shootX,shootY,shootW,0);
-        pointCreator(shootX,shootY,shootW,2);
+        pointCreator(shootX,shootY,shootW,0, side);
+        pointCreator(shootX,shootY,shootW,2, side);
     }
 }
