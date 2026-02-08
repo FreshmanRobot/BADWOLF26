@@ -73,7 +73,7 @@ public class EthanDoesASillyLittleCoding extends OpMode{
     public void loop() {
         //calc is slang for calculator
         odometryPosition.OdoCalc();
-        mecanumCalc.calculate(odometryPosition.X,odometryPosition.Y,odometryPosition.W, intakeAndShooting.finished);
+        mecanumCalc.calculate(odometryPosition.X,odometryPosition.Y,odometryPosition.W, intakeAndShooting.finished, odometryPosition.exit);
         intakeAndShooting.run(mecanumCalc.status);
         blink182.reverseLed(mecanumCalc.ledon);
         //set powers

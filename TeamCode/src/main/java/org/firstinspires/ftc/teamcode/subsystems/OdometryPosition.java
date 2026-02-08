@@ -24,6 +24,8 @@ public class OdometryPosition {
     private double PY;
     private double DX;
     private double DY;
+    private int exittimer = 0;
+    public boolean exit;
     public double D;
 
     public OdometryPosition (DcMotor OdoY, DcMotor OdoX, double SY, double SX, double SW) {
@@ -38,8 +40,15 @@ public class OdometryPosition {
         CY = OY.getCurrentPosition(); //i'm not typing in getCurrentPosition() like seven times
         CX = OX.getCurrentPosition(); //wasting precious mem storage just because my fingers are lazy breh
 
-        DY = (CY-PY)/YMOD; //strafe odo change
-        DX = (CX-PX)/XMOD; //forward odo change
+        DY = (CY-PY)/YMOD; //forward odo change
+        DX = (CX-PX)/XMOD; //strafe odo change
+
+        //timer for no change in forward
+        if (Math.abs(DY) < 0.05) {
+            exittimer++;
+        } else {
+            exittimer = 0;
+        }
 
         PY = CY; //X position
         PX = PY; //Y position
@@ -54,6 +63,13 @@ public class OdometryPosition {
         Y += FD*Math.sin(FA);
         X += FD*Math.cos(FA);
         D = FD;
+
+        //no change in forward exit output
+        if (exittimer > 500) {
+            exit = true;
+        } else {
+            exit = false;
+        }
     }
 
 

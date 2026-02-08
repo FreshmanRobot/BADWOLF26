@@ -26,14 +26,24 @@ public class MecanumCalc {
         }
 
         shootPos(side);
+        pointCreator(44,84,0,0,side);
+        pointCreator(10,84,0,1,side);
+        pointCreator(14,72,90,0,side);
+        shootPos(side);
+        pointCreator(44,57,0,0,side);
+        pointCreator(10,57,0,1,side);
+        shootPos(side);
+        pointCreator(44,36,0,0,side);
+        pointCreator(10,36,0,1,side);
+        shootPos(side);
     }
     private void GenPointsS () {
         SX = 0;
         SY = 0;
         SW = 0;
         for (int a = 0; a < 5; a++) {
-            pointCreator(0, 48, 0, 0, "BLUE");
-            pointCreator(0, 0, 0, 0, "BLUE");
+            pointCreator(0, 48, 0, 0, "");
+            pointCreator(0, 0, 0, 0, "");
         }
     }
 
@@ -42,9 +52,9 @@ public class MecanumCalc {
         SY = 0;
         SW = 0;
         for (int a = 0; a < 5; a++) {
-            pointCreator(36, 48, -60, 0, "BLUE");
-            pointCreator(-36, 48, -180, 0, "BLUE");
-            pointCreator(0, 0, 30, 0, "BLUE");
+            pointCreator(36, 48, -60, 0, "");
+            pointCreator(-36, 48, -180, 0, "");
+            pointCreator(0, 0, 30, 0, "");
         }
     }
 
@@ -76,7 +86,7 @@ public class MecanumCalc {
         }
     }
 
-    public static void calculate(double X, double Y, double W, boolean finished) {
+    public static void calculate(double X, double Y, double W, boolean finished, boolean exit) {
         //set up given values
         double TX = points[iter][0];
         double TY = points[iter][1];
@@ -88,7 +98,8 @@ public class MecanumCalc {
         double DY = TY-Y;
         double DW = TW-W;
 
-        if (Math.abs(DX) < transError && Math.abs(DY) < transError && Math.abs(DW) < rotError) {
+        //robot is close enough to target or hasn't moved forward in a while unless it is about to shoot
+        if ((Math.abs(DX) < transError && Math.abs(DY) < transError && Math.abs(DW) < rotError) || (exit && IN!=2 && points[iter+1][3]!=2)) {
             //arrived at destination
             if (IN != 2 || finished) {
                 iter++;
@@ -219,17 +230,12 @@ public class MecanumCalc {
     //bluduzz i probably did *not* need two freaking functions for ts
     private void pointCreator (double x, double y, double w, double mPower, String side) {
         //make array of features
-        double[] pointGroup = new double[4];
-        if (side == "BLUE") {
-            pointGroup[0] = x;
-            pointGroup[1] = y;
-            pointGroup[2] = w;
-            pointGroup[3] = mPower;
-        } else {
+        double[] pointGroup = {x,y,w,mPower};
+        if (side == "RED") {
+            //x pos mirrored
             pointGroup[0] = 144-x;
-            pointGroup[1] = y;
+            //angle needs to be mirrored (how to do?)
             pointGroup[2] = w;
-            pointGroup[3] = mPower;
         }
         //call function
         points = arrayMod (points, pointGroup);
