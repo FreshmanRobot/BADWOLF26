@@ -5,8 +5,9 @@ public class OdometryPosition {
     private final DcMotor OY;
     private final DcMotor OX;
 
-    private final double YMOD = 1; //set these to the scaling
-    private final double XMOD = 1; //set these to the scaling
+    private final double YMOD = 1000; //set these to the scaling
+    private final double XMOD = 1000; //set these to the scaling
+    private final double WMOD = 69000/180; //set these to the scaling
 
     //output values
     public static double X;
@@ -34,6 +35,11 @@ public class OdometryPosition {
         Y = SY;//bau
         X = SX;
         W = SW;
+
+        OdoY.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        OdoY.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        OdoX.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        OdoX.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
     }
 
     public void OdoCalc () {
@@ -43,6 +49,11 @@ public class OdometryPosition {
         DY = (CY-PY)/YMOD; //forward odo change
         DX = (CX-PX)/XMOD; //strafe odo change
 
+        if (Math.abs(DY)*YMOD + Math.abs(DX)*XMOD < 0.1) {
+            DY = 0;
+            DX = 0;
+        }
+
         //timer for no change in forward
         if (Math.abs(DY) < 0.05) {
             exittimer++;
@@ -51,15 +62,20 @@ public class OdometryPosition {
         }
 
         PY = CY; //X position
-        PX = PY; //Y position
+        PX = CX; //Y position
 
         //yeah math! (this junk looks like magical nonsense now i legit forgot how ts works)
         double FD = Math.hypot(Math.abs(DY), Math.abs(DX));
         double FA = Math.atan2(Math.hypot(OYoffset[0],OYoffset[1])*DY,Math.hypot(OXoffset[0],OXoffset[1])*DX);
-        W += -Math.toDegrees(FA);
+        W += -Math.toDegrees(FA) / WMOD;
 
         //outputs
-        W = (W+180)%360 - 180;
+        if (W > 180) {
+            W -= 360;
+        } else if (W < -180) {
+            W += 360;
+        }
+
         Y += FD*Math.sin(FA);
         X += FD*Math.cos(FA);
         D = FD;

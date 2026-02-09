@@ -22,7 +22,6 @@ public class EthanOdoTest extends OpMode{
         backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
         frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.REVERSE);
-        odometryPosition = new OdometryPosition(frontLeftDrive, backLeftDrive, 0, 0, 0);
 
     }
 
@@ -32,7 +31,7 @@ public class EthanOdoTest extends OpMode{
     }
     @Override
     public void start() {
-        //uhhhh
+        odometryPosition = new OdometryPosition(frontLeftDrive, backLeftDrive, 0, 0, 0);
     }
     @Override
     public void loop() {
