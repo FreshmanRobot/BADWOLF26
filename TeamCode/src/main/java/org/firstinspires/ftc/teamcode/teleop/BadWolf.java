@@ -1,10 +1,6 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
-import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.util.ElapsedTime;
-
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -14,16 +10,13 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.subsystems.GateController;
 import org.firstinspires.ftc.teamcode.subsystems.ClawController;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelController;
+import org.firstinspires.ftc.teamcode.subsystems.GateController;
+
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.teamcode.subsystems.LedController;
 
-import com.qualcomm.robotcore.hardware.LED;
-
-
-@TeleOp(name="A BadWolf Official ", group="Linear OpMode")
+@TeleOp(name="A Bad Wolf Official ", group="Linear OpMode")
 public class BadWolf extends LinearOpMode {
 
     private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
@@ -32,29 +25,20 @@ public class BadWolf extends LinearOpMode {
     private Servo clawServo = null;
     private Servo leftHoodServo = null;
     private Servo gateServo = null;
-    public LED backLedR = null;
-    public LED backLedG = null;
-    public LED sideLedR = null;
-    public LED sideLedG = null;
 
-
-
-    // Gate/Intake constants - UPDATED POSITIONS
+    // Gate/Intake constants
     private static final double GATE_OPEN = 0.28;
-    private static final double GATE_CLOSED = 0.60;
+    private static final double GATE_CLOSED = 0.73;
     private static final long INTAKE_DURATION_MS = 1200;
     private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
-    private static final double INTAKE_SEQUENCE_POWER = 1.0;
+    private static final double INTAKE_SEQUENCE_POWER = -1.0;
 
     // shooter state (we will drive it via FlywheelController)
     private FlywheelController flywheel;
 
-    private double targetRPM = 3300;
+    private double targetRPM = 3000;
 
     private double rpmScale = 1.0;
-
-    private boolean backPressedLast = false;
-    private boolean aPressedLast = false;
     private boolean xPressedLast = false;
     private boolean yPressedLast = false;
 
@@ -64,13 +48,14 @@ public class BadWolf extends LinearOpMode {
     private boolean dpadUpLast = false;
     private boolean bPressedLast = false;
 
+    private boolean backPressedLast = false;
     private boolean atTargetLast = false;
     private boolean rumbling = false;
     private long rumbleEndTimeMs = 0L;
     private static final long RUMBLE_DURATION_MS = 1000L;
 
     // hood/claw timing
-    private double leftHoodPosition = 0.43;
+    private double leftHoodPosition = 0.9;
 
     // Claw constants
     private static final double CLAW_OPEN = 0.2;
@@ -83,25 +68,24 @@ public class BadWolf extends LinearOpMode {
     private boolean leftBumperLast = false;
     private boolean rightBumperLast = false;
 
-    // ----- IMU align control internals -----
-    // These allow for braking strength and tolerance logic
     // ============ IMU Align Logic ============
     private IMU imu = null;
     private double imuAlignAngle = 0.0;
+    private boolean aPressedLast = false;
     private boolean xImuAlignActive = false; // acts as an "aligning" state for X button/IMU align
 
+    // ----- IMU align control internals -----
+    // These allow for braking strength and tolerance logic
     private double lastImuError = 0;
     private double lastImuTime = 0;
 
     @Override
     public void runOpMode() {
-
         frontLeftDrive = hardwareMap.get(DcMotor.class, "frontLeft");
         backLeftDrive = hardwareMap.get(DcMotor.class, "backLeft");
         frontRightDrive = hardwareMap.get(DcMotor.class, "frontRight");
         backRightDrive = hardwareMap.get(DcMotor.class, "backRight");
 
-        // Obtain shooter as DcMotorEx (FlywheelController expects DcMotorEx primary)
         shooterEx = hardwareMap.get(DcMotorEx.class, "shooter");
         shooter2 = hardwareMap.get(DcMotor.class, "shooter2");
 
@@ -110,13 +94,6 @@ public class BadWolf extends LinearOpMode {
         leftHoodServo = hardwareMap.get(Servo.class, "hoodServo");
         gateServo = hardwareMap.get(Servo.class, "gateServo");
 
-        //LEDs
-        backLedR = hardwareMap.get(LED.class, "backLedR");
-        backLedG = hardwareMap.get(LED.class, "backLedG");
-        sideLedR = hardwareMap.get(LED.class, "sideLedR");
-        sideLedG = hardwareMap.get(LED.class, "sideLedG");
-
-
         frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
         backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
         frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
@@ -124,18 +101,15 @@ public class BadWolf extends LinearOpMode {
         shooterEx.setDirection(DcMotor.Direction.FORWARD);
         shooter2.setDirection(DcMotor.Direction.REVERSE);
 
-        // let FlywheelController handle encoder modes; keep shooter2 as no-encoder mirror
         shooter2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        LedController ledController;
         GateController gateController;
         ClawController clawController;
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-        // Initialize controllers
-        targetRPM = 3300;
+        targetRPM = 2900.0;
         clawServo.setPosition(0.0);
         leftHoodServo.setPosition(leftHoodPosition);
 
@@ -146,12 +120,10 @@ public class BadWolf extends LinearOpMode {
                 INTAKE_DURATION_MS, CLAW_TRIGGER_BEFORE_END_MS,
                 INTAKE_SEQUENCE_POWER
         );
-        ledController = new LedController(backLedR, backLedG, sideLedR, sideLedG);
 
-        // Initialize at the Open position
-        gateServo.setPosition(GATE_CLOSED);
+        gateController.setGateClosed(false);
+        gateServo.setPosition(GATE_OPEN);
 
-        // Try to obtain a voltage sensor if available (optional)
         VoltageSensor voltageSensor = null;
         try {
             if (hardwareMap.voltageSensor.iterator().hasNext()) {
@@ -159,13 +131,10 @@ public class BadWolf extends LinearOpMode {
             }
         } catch (Exception ignored) {}
 
-
-        // Create FlywheelController: primary (DcMotorEx), secondary (DcMotor), telemetry, voltageSensor (may be null)
         flywheel = new FlywheelController(shooterEx, shooter2, telemetry, voltageSensor);
         flywheel.setTargetRpm(targetRPM);
         flywheel.setShooterOn(true);
 
-        // ========== IMU INIT ==========
         try {
             imu = hardwareMap.get(IMU.class, "imu");
             IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
@@ -177,6 +146,7 @@ public class BadWolf extends LinearOpMode {
             telemetry.addData("IMU", "ERROR initializing IMU: " + ex.getMessage());
             telemetry.update();
         }
+
         waitForStart();
 
         // IMU align state variables
@@ -184,7 +154,7 @@ public class BadWolf extends LinearOpMode {
 
         // IMU align controller parameters
         final double kP = 0.02;      // Proportional gain
-        final double kD = 0.003;     // Derivative gain for damping
+        final double kD = 0.0025;     // Derivative gain for damping
         final double minPower = 0.07;  // Minimum power to overcome friction
         final double angleTolerance = 1.5; // Degrees, when to stop
         final double velocityTolerance = 0.2; // Not used as encoder velocity not available on DcMotor (non-Ex)
@@ -197,7 +167,6 @@ public class BadWolf extends LinearOpMode {
             boolean aNow = gamepad1.a || gamepad2.a;
             if (aNow && !aPressedLast && imu != null) {
                 imuAlignAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
-                telemetry.addData("IMU Align Angle", imuAlignAngle);
             }
             aPressedLast = aNow;
 
@@ -215,15 +184,14 @@ public class BadWolf extends LinearOpMode {
                 // --- Improved align logic with P+D controller and braking ---
                 double currentTime = alignTimer.seconds();
                 double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
-                double error = Math.abs(imuAlignAngle) - Math.abs(imuAngle);
-                double sign = Math.signum(imuAlignAngle - imuAngle);
+                double error = imuAlignAngle - imuAngle;
 
                 // Derivative calculation for braking (damping)
                 double deltaTime = currentTime - lastImuTime;
                 double derivative = 0;
                 if (deltaTime > 0) derivative = (error - lastImuError) / deltaTime;
 
-                double turnPower = (kP * error + kD * derivative)*sign;
+                double turnPower = kP * error + kD * derivative;
 
                 // Clamp for minimum power for large error, but stop for small error
                 if (Math.abs(turnPower) < minPower && Math.abs(error) > angleTolerance) {
@@ -259,7 +227,8 @@ public class BadWolf extends LinearOpMode {
                 lastImuTime = currentTime;
                 continue; // skip rest of loop when aligning
             }
-            // DRIVE LOGIC
+
+            // DRIVE LOGIC (usual)
             double y = -gamepad1.left_stick_y;
             double x = gamepad1.left_stick_x;
             double rx = gamepad1.right_stick_x;
@@ -301,7 +270,6 @@ public class BadWolf extends LinearOpMode {
 
             boolean dpadRightNow = gamepad1.dpad_right || gamepad2.dpad_right;
             if (dpadRightNow && !dpadRightLast) {
-                // Respect FlywheelController's MAX_RPM by clamping
                 targetRPM = Math.min(FlywheelController.MAX_RPM, targetRPM + 100.0);
                 flywheel.setTargetRpm(targetRPM);
             }
@@ -318,10 +286,10 @@ public class BadWolf extends LinearOpMode {
             // INTAKE (transfer motor removed)
             if (!gateController.isBusy()) {
                 if (gamepad1.right_trigger > 0.1 || gamepad2.right_trigger > 0.1) {
-                    intakeMotor.setDirection(DcMotor.Direction.FORWARD);
+                    intakeMotor.setDirection(DcMotor.Direction.REVERSE);
                     intakeMotor.setPower(1.0);
                 } else if (gamepad1.left_trigger > 0.1 || gamepad2.left_trigger > 0.1) {
-                    intakeMotor.setDirection(DcMotor.Direction.REVERSE);
+                    intakeMotor.setDirection(DcMotor.Direction.FORWARD);
                     intakeMotor.setPower(1.0);
                 } else {
                     intakeMotor.setPower(0.0);
@@ -342,14 +310,11 @@ public class BadWolf extends LinearOpMode {
             }
             yPressedLast = yNow;
 
-            ledController.ledState(gateController.gateClosed);
-
             // Update controllers
             boolean shouldTriggerClaw = gateController.update(nowMs);
             if (shouldTriggerClaw) clawController.trigger(nowMs);
 
-            // --- Flywheel PIDF update (replaces manual PID-ish section) ---
-            // Keep targetRPM in sync with flywheel
+            // --- Flywheel PIDF update ---
             flywheel.setTargetRpm(targetRPM);
             flywheel.update();
 
@@ -369,12 +334,12 @@ public class BadWolf extends LinearOpMode {
             backPressedLast = backNow;
             clawController.update(nowMs);
 
-            // TELEMETRY
             telemetry.addData("Gate Pos", gateServo.getPosition());
             telemetry.addData("RPM", "%.1f", flywheel.getCurrentRPM());
             telemetry.addData("Target RPM", "%.1f", flywheel.getTargetRpm());
             telemetry.addData("Shooter Power", "%.3f", flywheel.getLastAppliedPower());
             telemetry.addData("PIDF Mode", flywheel.isUsingFarCoefficients() ? "FAR" : "CLOSE");
+            telemetry.addData("IMU Reference Angle", imuAlignAngle);
             telemetry.update();
         }
     }
