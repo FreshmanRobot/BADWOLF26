@@ -52,8 +52,6 @@ public class Constants {
             .strafeEncoder_HardwareMapName("backLeft")
             .forwardEncoderDirection(Encoder.FORWARD)
             .strafeEncoderDirection(Encoder.FORWARD)
-            .forwardTicksToInches(0.00303)
-            .strafeTicksToInches(-0.002945)
             //.forwardPodY(5.2)    // adjust based on your robot’s actual offset
             //.strafePodX(1.7)   // adjust based on your robot’s actual offset
             .forwardPodY(6)    // adjust based on your robot’s actual offset
@@ -61,7 +59,7 @@ public class Constants {
             .IMU_HardwareMapName("imu")
             .IMU_Orientation(
                 new RevHubOrientationOnRobot(
-                    RevHubOrientationOnRobot.LogoFacingDirection.LEFT,
+                    RevHubOrientationOnRobot.LogoFacingDirection.RIGHT,
                     RevHubOrientationOnRobot.UsbFacingDirection.UP
                 )
                 );
