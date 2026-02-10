@@ -51,7 +51,7 @@ public class Constants {
             .forwardEncoder_HardwareMapName("frontLeft")
             .strafeEncoder_HardwareMapName("backLeft")
             .forwardEncoderDirection(Encoder.FORWARD)
-            .strafeEncoderDirection(Encoder.FORWARD)
+            .strafeEncoderDirection(Encoder.REVERSE)
             //.forwardPodY(5.2)    // adjust based on your robot’s actual offset
             //.strafePodX(1.7)   // adjust based on your robot’s actual offset
             .forwardPodY(6)    // adjust based on your robot’s actual offset
