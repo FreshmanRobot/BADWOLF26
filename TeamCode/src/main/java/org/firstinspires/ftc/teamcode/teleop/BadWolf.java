@@ -113,7 +113,7 @@ public class BadWolf extends LinearOpMode {
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-        // Initialize controllers
+        // Initialize controller
         targetRPM = 3300;
         clawServo.setPosition(0.0);
         leftHoodServo.setPosition(leftHoodPosition);
