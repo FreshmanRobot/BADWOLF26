@@ -64,7 +64,7 @@ public class OdometryPosition {
         PY = CY; //X position
         PX = CX; //Y position
 
-        //yeah math! (this junk looks like magical nonsense now i legit forgot how ts works)
+        //DO: Fix the angle change calculations so solely axial movement does not reverse the angle direction
         double FD = Math.hypot(Math.abs(DY), Math.abs(DX));
         double FA = Math.atan2(Math.hypot(OYoffset[0],OYoffset[1])*DY,Math.hypot(OXoffset[0],OXoffset[1])*DX);
         W += -Math.toDegrees(FA) / WMOD;
