@@ -38,13 +38,13 @@ public class FlywheelController {
     @Sorter(sort = 8) public static double CLOSE_derivativeAlpha = 0.9;
     @Sorter(sort = 9) public static double CLOSE_rpmFilterAlpha = 0.72;
     @Sorter(sort = 10) public static double CLOSE_powerSmoothingAlpha = 0.5;
-    @Sorter(sort = 11) public static double CLOSE_ffReferenceVoltage = 13.0;
-    @Sorter(sort = 12) public static double CLOSE_ffReferenceMaxTicksPerSec = 4930;
+    @Sorter(sort = 11) public static double CLOSE_ffReferenceVoltage = 11.87;
+    @Sorter(sort = 12) public static double CLOSE_ffReferenceMaxTicksPerSec = 5180;
     @Sorter(sort = 13) public static double CLOSE_rpmTolerance = 50.0;
 
     // --- FAR PIDF coefficients (for target RPM at or above threshold) ---
     @Sorter(sort = 14) public static double FAR_kP = 0.0022;
-    @Sorter(sort = 15) public static double FAR_kI = 0.0016;
+    @Sorter(sort = 15) public static double FAR_kI = 0.0014;
     @Sorter(sort = 16) public static double FAR_kD = 0.000005;
     @Sorter(sort = 17) public static double FAR_kF = 1.85;
     @Sorter(sort = 18) public static double FAR_integralLimit = 50;
@@ -56,8 +56,8 @@ public class FlywheelController {
     @Sorter(sort = 24) public static double FAR_rpmTolerance = 50.0;
 
     // --- Target RPM presets ---
-    @Sorter(sort = 25) public static double closeRPM = 2600;
-    @Sorter(sort = 26) public static double farRPM = 3300;
+    @Sorter(sort = 25) public static double closeRPM = 3300;
+    @Sorter(sort = 26) public static double farRPM = 4000;
 
     // Legacy compatibility variables (kept for backward compatibility)
     @Sorter(sort = 27) public static double kP = 0.00145;

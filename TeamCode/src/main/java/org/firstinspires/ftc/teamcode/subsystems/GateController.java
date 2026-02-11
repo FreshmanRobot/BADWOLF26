@@ -60,7 +60,7 @@ public class GateController {
         setGateClosed(false);
 
         // Start intake motor
-        intakeMotor.setPower(intakePower);
+        intakeMotor.setPower(-intakePower);
     }
 
     // Update the sequence; returns true exactly once when it is time to trigger the claw.

@@ -239,7 +239,7 @@ public class BWTEST extends OpMode {
     private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
     private static final double INTAKE_SEQUENCE_POWER = 1.0;
 
-    private double targetRPM= 2500.0;
+    private double targetRPM= 3300;
     private boolean atTargetLast = false;
 
     private double leftHoodPosition = 0.9;

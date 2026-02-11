@@ -19,8 +19,8 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
             .mass(4.5)
-            .forwardZeroPowerAcceleration(-52.425830770605764)
-            .lateralZeroPowerAcceleration(-70.269834750347598)
+            .forwardZeroPowerAcceleration(-37.802)
+            .lateralZeroPowerAcceleration(-51.39)
             .translationalPIDFCoefficients(new PIDFCoefficients(0.08,0.0,0.0067,0.033))
             .headingPIDFCoefficients(new PIDFCoefficients(0.8, 0, 0.03, 0.028))
             ;
@@ -42,8 +42,8 @@ public class Constants {
             .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
             .rightFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
             .rightRearMotorDirection(DcMotorSimple.Direction.REVERSE)
-            .xVelocity(38.54861877529901)
-            .yVelocity(26.826)
+            .xVelocity(57.70)
+            .yVelocity(30.466)
             ;
 
     // ✅ Pinpoint localizer constants
@@ -52,8 +52,8 @@ public class Constants {
             .strafeEncoder_HardwareMapName("backLeft")
             .forwardEncoderDirection(Encoder.FORWARD)
             .strafeEncoderDirection(Encoder.REVERSE)
-            //.forwardPodY(5.2)    // adjust based on your robot’s actual offset
-            //.strafePodX(1.7)   // adjust based on your robot’s actual offset
+            .forwardTicksToInches(0.002195)
+            .forwardTicksToInches(0.002951)
             .forwardPodY(6)    // adjust based on your robot’s actual offset
             .strafePodX(-1)   // adjust based on your robot’s actual offset
             .IMU_HardwareMapName("imu")

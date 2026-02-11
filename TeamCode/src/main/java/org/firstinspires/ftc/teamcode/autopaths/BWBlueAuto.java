@@ -53,7 +53,7 @@ public class BWBlueAuto extends OpMode {
     private static final double TIMED_INTAKE_SECONDS = 0.7;
     private boolean timedIntakeActive = false;
 
-    private double targetRPM = 3000;
+    private double targetRPM = 3300;
 
     private long clawActionStartMs = 0L;
     private static final long CLAW_CLOSE_MS = 250L;
@@ -71,7 +71,7 @@ public class BWBlueAuto extends OpMode {
     private boolean preActionEntered = false;
 
     private long shooterWaitStartMs = -1;
-    private static final long SHOOTER_WAIT_TIMEOUT_MS = 4000L;
+    private static final long SHOOTER_WAIT_TIMEOUT_MS = 2000L;
 
     private DcMotor shooterMotor, shooter2;
     private boolean shooterOn = false;
@@ -502,19 +502,19 @@ public class BWBlueAuto extends OpMode {
 
             Path2 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(48.000, 96.000), new Pose(44.000, 84.000)))
+                    .addPath(new BezierLine(new Pose(48.000, 96.000), new Pose(44.000, 96.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(130), Math.toRadians(180))
                     .build();
 
             Path3 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(44.000, 84.000), new Pose(24.000, 84.000)))
+                    .addPath(new BezierLine(new Pose(44.000, 96.000), new Pose(19.000, 96.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Path4 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(24.000, 84.000), new Pose(48.000, 96.000)))
+                    .addPath(new BezierLine(new Pose(19.000, 96.000), new Pose(48.000, 96.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(130))
                     .build();
 
@@ -526,7 +526,7 @@ public class BWBlueAuto extends OpMode {
 
             Path6 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 58.000), new Pose(15.000, 58.000)))
+                    .addPath(new BezierLine(new Pose(46.000, 58.000), new Pose(14.000, 58.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 

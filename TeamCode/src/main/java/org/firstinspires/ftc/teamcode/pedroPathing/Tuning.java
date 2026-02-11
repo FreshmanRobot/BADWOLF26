@@ -508,6 +508,8 @@ class LateralVelocityTuner extends OpMode {
             }
             average /= velocities.size();
 
+            telemetry.addData("vel", follower.getVelocity());
+
             telemetryM.debug("Strafe Velocity: " + average);
             telemetryM.debug("\n");
             telemetryM.debug("Press A to set the Lateral Velocity temporarily (while robot remains on).");
