@@ -40,7 +40,7 @@ public class BWBlueAuto extends OpMode {
     private static final double SHOOT_HEADING_RAD_1 = Math.toRadians(135);
     private static final double SHOOT_HEADING_RAD_4 = Math.toRadians(142);
     private static final double SHOOT_HEADING_RAD_7 = Math.toRadians(144);
-    private static final double SHOOT_HEADING_RAD_10 = Math.toRadians(150);
+    private static final double SHOOT_HEADING_RAD_10 = Math.toRadians(140);
     private static final double HEADING_TOLERANCE_RAD = Math.toRadians(4); // ~4°
 
     private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_WAIT, CLAW_ACTION, FINISHED }
@@ -608,19 +608,18 @@ public class BWBlueAuto extends OpMode {
 
             ShootToSpike1 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1), new Pose(45.000, 92.000)))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1), new Pose(45.000, 93.000)))
                     .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_1, Math.toRadians(180))
                     .build();
 
             Spike1Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(44.000, 92.000), new Pose(15.000, 92.000)))
+                    .addPath(new BezierLine(new Pose(44.000, 93.000), new Pose(15.000, 93.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
-            Spike1ToShoot = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(15.000, 92.000), new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4)))
+            Spike1ToShoot = follower                    .pathBuilder()
+                    .addPath(new BezierLine(new Pose(15.000, 93.000), new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), SHOOT_HEADING_RAD_4)
                     .build();
 
@@ -662,9 +661,10 @@ public class BWBlueAuto extends OpMode {
 
             ShootToStart = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(20.000, 122.000)))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(40.000, 122.000)))
                     .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_10, Math.toRadians(135))
                     .build();
+
         }
     }
 }
