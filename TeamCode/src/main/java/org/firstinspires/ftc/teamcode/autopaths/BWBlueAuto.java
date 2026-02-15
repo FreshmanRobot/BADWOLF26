@@ -37,7 +37,10 @@ public class BWBlueAuto extends OpMode {
     private Paths paths;
 
     // heading convergence for non‑turret robot
-    private static final double SHOOT_HEADING_RAD = Math.toRadians(130);
+    private static final double SHOOT_HEADING_RAD_1 = Math.toRadians(135);
+    private static final double SHOOT_HEADING_RAD_4 = Math.toRadians(142);
+    private static final double SHOOT_HEADING_RAD_7 = Math.toRadians(144);
+    private static final double SHOOT_HEADING_RAD_10 = Math.toRadians(150);
     private static final double HEADING_TOLERANCE_RAD = Math.toRadians(4); // ~4°
 
     private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_WAIT, CLAW_ACTION, FINISHED }
@@ -50,7 +53,7 @@ public class BWBlueAuto extends OpMode {
     private static final double INTAKE_WAIT_SECONDS = 2.2;
 
     private Timer timedIntakeTimer;
-    private static final double TIMED_INTAKE_SECONDS = 0.7;
+    private static final double TIMED_INTAKE_SECONDS = 0.5;
     private boolean timedIntakeActive = false;
 
     private double targetRPM = 3300;
@@ -90,7 +93,7 @@ public class BWBlueAuto extends OpMode {
     private CRServo transferMotor; // unused but kept
     private Servo gateServo = null;
     private Servo leftHoodServo = null;
-    private static final double LEFT_HOOD_POSITION = 0.9;
+    private static final double LEFT_HOOD_POSITION = 0.43;
 
     private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive; // unused but kept
 
@@ -105,8 +108,14 @@ public class BWBlueAuto extends OpMode {
     private static final double INTAKE_SEQUENCE_POWER = 1.0;
     private int intakeSegmentEnd = -1;
 
-    private static final double SHOOT_POSE_X = 48.0;
-    private static final double SHOOT_POSE_Y = 96.0;
+    private static final double SHOOT_POSE_X_1 = 48.0;
+    private static final double SHOOT_POSE_Y_1 = 96.0;
+    private static final double SHOOT_POSE_X_4 = 48.0;
+    private static final double SHOOT_POSE_Y_4 = 96.0;
+    private static final double SHOOT_POSE_X_7 = 46.0;
+    private static final double SHOOT_POSE_Y_7 = 94.0;
+    private static final double SHOOT_POSE_X_10 = 42.0;
+    private static final double SHOOT_POSE_Y_10 = 90.0;
     private static final double START_POSE_TOLERANCE_IN = 6.0;
 
     public BWBlueAuto() {}
@@ -243,6 +252,8 @@ public class BWBlueAuto extends OpMode {
     @Override
     public void start() {
         flywheel.setTargetRpm(targetRPM);
+        startIntake();
+        //stopIntake();
         follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
 
         shooterWaitStartMs = System.currentTimeMillis();
@@ -277,7 +288,7 @@ public class BWBlueAuto extends OpMode {
     public void stop() {
         if (shooterMotor != null) shooterMotor.setPower(0.0);
         if (shooter2 != null) shooter2.setPower(0.0);
-        stopIntake();
+        //stopIntake();
         if (clawServo != null) clawServo.setPosition(CLAW_OPEN);
         if (gateServo != null) gateServo.setPosition(GATE_CLOSED);
         state = AutoState.FINISHED;
@@ -300,34 +311,74 @@ public class BWBlueAuto extends OpMode {
         }
     }
 
+    //if pathIndex is listed then run PRE_ACTION
     private boolean endsAtShoot(int pathIndex) {
         return pathIndex == 1 || pathIndex == 4 || pathIndex == 7 || pathIndex == 10;
     }
 
     private double distanceToShootPose() {
-        try {
-            Pose p = follower.getPose();
-            double dx = p.getX() - SHOOT_POSE_X;
-            double dy = p.getY() - SHOOT_POSE_Y;
-            return Math.hypot(dx, dy);
-        } catch (Exception e) {
+        if (currentPathIndex==1) {
+            try {
+                Pose p = follower.getPose();
+                double dx = p.getX() - SHOOT_POSE_X_1;
+                double dy = p.getY() - SHOOT_POSE_Y_1;
+                return Math.hypot(dx, dy);
+            } catch (Exception e) {
+                return Double.POSITIVE_INFINITY;
+            }
+        }
+        else if (currentPathIndex==4) {
+            try {
+                Pose p = follower.getPose();
+                double dx = p.getX() - SHOOT_POSE_X_4;
+                double dy = p.getY() - SHOOT_POSE_Y_4;
+                return Math.hypot(dx, dy);
+            } catch (Exception e) {
+                return Double.POSITIVE_INFINITY;
+            }
+        }
+        else if (currentPathIndex==7) {
+            try {
+                Pose p = follower.getPose();
+                double dx = p.getX() - SHOOT_POSE_X_7;
+                double dy = p.getY() - SHOOT_POSE_Y_7;
+                return Math.hypot(dx, dy);
+            } catch (Exception e) {
+                return Double.POSITIVE_INFINITY;
+            }
+        }
+        else if (currentPathIndex==10) {
+            try {
+                Pose p = follower.getPose();
+                double dx = p.getX() - SHOOT_POSE_X_10;
+                double dy = p.getY() - SHOOT_POSE_Y_10;
+                return Math.hypot(dx, dy);
+            } catch (Exception e) {
+                return Double.POSITIVE_INFINITY;
+            }
+        }
+        else {
             return Double.POSITIVE_INFINITY;
         }
     }
 
+
     private void startPath(int idx) {
-        if (idx < 1 || idx > 10) {
+        if (idx < 1 || idx > 11) {
             currentPathIndex = 0;
             state = AutoState.FINISHED;
             return;
         }
 
-        if (idx ==1) { intakeSegmentEnd = 1; startIntake(); }
-        else if (idx == 3) { intakeSegmentEnd = 3; startIntake(); }
-        else if (idx == 6) { intakeSegmentEnd = 6; startIntake(); }
-        else if (idx == 9) { intakeSegmentEnd = 9; startIntake(); }
 
-        if (idx == 4 || idx == 7 || idx == 10) {
+        // for spikes +target
+        if (idx == 2) { intakeSegmentEnd = 3; startIntake(); clawServo.setPosition(CLAW_OPEN); targetRPM=3300;}
+        else if (idx == 5) { intakeSegmentEnd = 6; startIntake(); clawServo.setPosition(CLAW_OPEN); targetRPM=3000;}
+        else if (idx == 8) { intakeSegmentEnd = 9; startIntake();  clawServo.setPosition(CLAW_OPEN); targetRPM=3000;}
+
+
+        //shoot
+        if (idx==1 || idx == 4 || idx == 7 || idx == 10) {
             startIntake();
             timedIntakeTimer.resetTimer();
             timedIntakeActive = true;
@@ -335,16 +386,17 @@ public class BWBlueAuto extends OpMode {
         }
 
         switch (idx) {
-            case 1: follower.followPath(paths.Path1); break;
-            case 2: follower.followPath(paths.Path2); break;
-            case 3: follower.followPath(paths.Path3); break;
-            case 4: follower.followPath(paths.Path4); break;
-            case 5: follower.followPath(paths.Path5); break;
-            case 6: follower.followPath(paths.Path6); break;
-            case 7: follower.followPath(paths.Path7); break;
-            case 8: follower.followPath(paths.Path8); break;
-            case 9: follower.followPath(paths.Path9); break;
-            case 10: follower.followPath(paths.Path10); break;
+            case 1: follower.followPath(paths.StartToShoot); break;
+            case 2: follower.followPath(paths.ShootToSpike1); break;
+            case 3: follower.followPath(paths.Spike1Colect); break;
+            case 4: follower.followPath(paths.Spike1ToShoot); break;
+            case 5: follower.followPath(paths.ShootToSpike2); break;
+            case 6: follower.followPath(paths.Spike2Colect); break;
+            case 7: follower.followPath(paths.Spike2ToShoot); break;
+            case 8: follower.followPath(paths.ShootToSpike3); break;
+            case 9: follower.followPath(paths.Spike3Colect); break;
+            case 10: follower.followPath(paths.Spike3ToShoot); break;
+            case 11: follower.followPath(paths.ShootToStart); break;
             default: break;
         }
 
@@ -355,7 +407,7 @@ public class BWBlueAuto extends OpMode {
     private void runStateMachine(long nowMs) {
         if (timedIntakeActive) {
             if (timedIntakeTimer.getElapsedTimeSeconds() >= TIMED_INTAKE_SECONDS) {
-                stopIntake();
+                //stopIntake();
                 timedIntakeActive = false;
                 intakeSegmentEnd = -1;
                 panelsTelemetry.debug("TimedIntake", "Timed intake ended after " + TIMED_INTAKE_SECONDS + "s");
@@ -379,7 +431,7 @@ public class BWBlueAuto extends OpMode {
                     int finished = currentPathIndex;
 
                     if (intakeSegmentEnd == finished) {
-                        stopIntake();
+                        //stopIntake();
                         intakeSegmentEnd = -1;
                     }
 
@@ -401,6 +453,7 @@ public class BWBlueAuto extends OpMode {
             }
 
             case PRE_ACTION: {
+                //go to shoot pose
                 if (!preActionEntered) {
                     poseWaitTimer.resetTimer();
                     preActionTimerStarted = false;
@@ -410,17 +463,54 @@ public class BWBlueAuto extends OpMode {
 
                 if (!preActionTimerStarted) {
                     double dist = distanceToShootPose();
-                    double headingErr = headingErrorRad(follower.getPose().getHeading(), SHOOT_HEADING_RAD);
+                    double targetHeading;
+
+                    if (currentPathIndex == 1)      targetHeading = SHOOT_HEADING_RAD_1;
+                    else if (currentPathIndex == 4) targetHeading = SHOOT_HEADING_RAD_4;
+                    else if (currentPathIndex == 7) targetHeading = SHOOT_HEADING_RAD_7;
+                    else if (currentPathIndex == 10) targetHeading = SHOOT_HEADING_RAD_10;
+                    else targetHeading = SHOOT_HEADING_RAD_1; // fallback
+
+                    double headingErr = headingErrorRad(
+                            follower.getPose().getHeading(),
+                            targetHeading
+                    );
 
                     boolean poseGood = dist <= START_POSE_TOLERANCE_IN && Math.abs(headingErr) <= HEADING_TOLERANCE_RAD;
                     boolean poseTimeout = poseWaitTimer.getElapsedTimeSeconds() >= PRE_ACTION_MAX_POSE_WAIT_SECONDS;
 
                     if (poseGood || poseTimeout) {
-                        try {
-                            // Snap odometry to known shoot pose (position + heading) to remove drift
-                            follower.setPose(new Pose(SHOOT_POSE_X, SHOOT_POSE_Y, SHOOT_HEADING_RAD));
-                        } catch (Exception ignored) {
-                            // If follower lacks setPose(), remove this call
+                        if (currentPathIndex==1) {
+                            try {
+                                // Snap odometry to known shoot pose (position + heading) to remove drift
+                                follower.setPose(new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1, SHOOT_HEADING_RAD_1));
+                            } catch (Exception ignored) {
+                                // If follower lacks setPose(), remove this call
+                            }
+                        }
+                        else if (currentPathIndex==4){
+                            try {
+                                // Snap odometry to known shoot pose (position + heading) to remove drift
+                                follower.setPose(new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4, SHOOT_HEADING_RAD_4));
+                            } catch (Exception ignored) {
+                                // If follower lacks setPose(), remove this call
+                            }
+                        }
+                        else if (currentPathIndex==7){
+                            try {
+                                // Snap odometry to known shoot pose (position + heading) to remove drift
+                                follower.setPose(new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7, SHOOT_HEADING_RAD_7));
+                            } catch (Exception ignored) {
+                                // If follower lacks setPose(), remove this call
+                            }
+                        }
+                        else if (currentPathIndex==10){
+                            try {
+                                // Snap odometry to known shoot pose (position + heading) to remove drift
+                                follower.setPose(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10, SHOOT_HEADING_RAD_10));
+                            } catch (Exception ignored) {
+                                // If follower lacks setPose(), remove this call
+                            }
                         }
                         preActionTimer.resetTimer();
                         preActionTimerStarted = true;
@@ -435,6 +525,7 @@ public class BWBlueAuto extends OpMode {
                 } else {
                     if (preActionTimer.getElapsedTimeSeconds() >= PRE_ACTION_WAIT_SECONDS) {
                         startIntake();
+                        gateServo.setPosition(GATE_OPEN);
                         intakeTimer.resetTimer();
                         state = AutoState.INTAKE_WAIT;
                     }
@@ -443,9 +534,10 @@ public class BWBlueAuto extends OpMode {
             }
 
             case INTAKE_WAIT: {
+                //run intake for INTAKE_WAIT_SECONDS
                 if (intakeTimer.getElapsedTimeSeconds() >= INTAKE_WAIT_SECONDS) {
                     if (intakeSegmentEnd == -1) {
-                        stopIntake();
+                        //stopIntake();
                     }
                     state = AutoState.CLAW_ACTION;
                 }
@@ -453,18 +545,32 @@ public class BWBlueAuto extends OpMode {
             }
 
             case CLAW_ACTION: {
-                if (gateController != null) {
-                    gateController.startIntakeSequence(nowMs);
+
+                if (clawActionStartMs == 0) {
+                    clawActionStartMs = nowMs;
+                    clawServo.setPosition(CLAW_CLOSED);
                 }
 
-                if (nextPathIndex > 0 && nextPathIndex <= 11) {
-                    startPath(nextPathIndex);
-                    nextPathIndex = -1;
-                } else {
-                    state = AutoState.FINISHED;
+                if (nowMs - clawActionStartMs >= 207) {
+                        //for max
+
+                    clawServo.setPosition(CLAW_OPEN);
+                    clawActionStartMs = 0;
+
+                    if (nextPathIndex > 0 && nextPathIndex <= 11) {
+                        if (gateServo != null) {
+                            gateServo.setPosition(GATE_CLOSED);
+                        }
+                        startPath(nextPathIndex);
+                        nextPathIndex = -1;
+                    } else {
+                        state = AutoState.FINISHED;
+                    }
                 }
+
                 break;
             }
+
 
             case FINISHED:
             case IDLE:
@@ -481,83 +587,83 @@ public class BWBlueAuto extends OpMode {
     }
 
     public static class Paths {
-        public PathChain Path1;
-        public PathChain Path2;
-        public PathChain Path3;
-        public PathChain Path4;
-        public PathChain Path5;
-        public PathChain Path6;
-        public PathChain Path7;
-        public PathChain Path8;
-        public PathChain Path9;
-        public PathChain Path10;
-        public PathChain Path11;
+        public PathChain StartToShoot;
+        public PathChain ShootToSpike1;
+        public PathChain Spike1Colect;
+        public PathChain Spike1ToShoot;
+        public PathChain ShootToSpike2;
+        public PathChain Spike2Colect;
+        public PathChain Spike2ToShoot;
+        public PathChain ShootToSpike3;
+        public PathChain Spike3Colect;
+        public PathChain Spike3ToShoot;
+        public PathChain ShootToStart;
 
         public Paths(Follower follower) {
-            Path1 = follower
+            StartToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(20.000, 122.000), new Pose(48.000, 96.000)))
-                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(135))
+                    .addPath(new BezierLine(new Pose(20.000, 122.000), new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1)))
+                    .setLinearHeadingInterpolation(Math.toRadians(135), SHOOT_HEADING_RAD_1)
                     .build();
 
-            Path2 = follower
+            ShootToSpike1 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(48.000, 96.000), new Pose(45.000, 92.000)))
-                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(180))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1), new Pose(45.000, 92.000)))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_1, Math.toRadians(180))
                     .build();
 
-            Path3 = follower
+            Spike1Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(45.000, 92.000), new Pose(15.000, 92.000)))
+                    .addPath(new BezierLine(new Pose(44.000, 92.000), new Pose(15.000, 92.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
-            Path4 = follower
+            Spike1ToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(15.000, 92.000), new Pose(48.000, 96.000)))
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(135))
+                    .addPath(new BezierLine(new Pose(15.000, 92.000), new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4)))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), SHOOT_HEADING_RAD_4)
                     .build();
 
-            Path5 = follower
+            ShootToSpike2 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(48.000, 96.000), new Pose(46.000, 70.000)))
-                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(180))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4), new Pose(46.000, 78.000)))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_4, Math.toRadians(180))
                     .build();
 
-            Path6 = follower
+            Spike2Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 70.000), new Pose(10.000, 70.000)))
+                    .addPath(new BezierLine(new Pose(46.000, 78.000), new Pose(10.000, 78.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
-            Path7 = follower
+            Spike2ToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(10.000, 70.000), new Pose(48.000, 96.000)))
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(135))
+                    .addPath(new BezierLine(new Pose(10.000, 78.000), new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7)))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), SHOOT_HEADING_RAD_7)
                     .build();
 
-            Path8 = follower
+            ShootToSpike3 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(48.000, 96.000), new Pose(46.000, 50.000)))
-                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(180))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7), new Pose(46.000, 56.000)))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_7, Math.toRadians(180))
                     .build();
 
-            Path9 = follower
+            Spike3Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 50.000), new Pose(10.000, 50.000)))
+                    .addPath(new BezierLine(new Pose(46.000, 56.000), new Pose(10.000, 56.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
-            Path10 = follower
+            Spike3ToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(10.000, 50.000), new Pose(48.000, 96.000)))
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(135))
+                    .addPath(new BezierLine(new Pose(10.000, 56.000), new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10)))
+                    .setLinearHeadingInterpolation(Math.toRadians(180), SHOOT_HEADING_RAD_10)
                     .build();
 
-            Path11 = follower
+            ShootToStart = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(48.000, 96.000), new Pose(20.000, 122.000)))
-                    .setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(135))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(20.000, 122.000)))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_10, Math.toRadians(135))
                     .build();
         }
     }
