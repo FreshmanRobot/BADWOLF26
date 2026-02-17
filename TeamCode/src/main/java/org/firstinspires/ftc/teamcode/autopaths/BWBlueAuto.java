@@ -40,7 +40,7 @@ public class BWBlueAuto extends OpMode {
     private static final double SHOOT_HEADING_RAD_1 = Math.toRadians(135);
     private static final double SHOOT_HEADING_RAD_4 = Math.toRadians(142);
     private static final double SHOOT_HEADING_RAD_7 = Math.toRadians(144);
-    private static final double SHOOT_HEADING_RAD_10 = Math.toRadians(140);
+    private static final double SHOOT_HEADING_RAD_10 = Math.toRadians(135);
     private static final double HEADING_TOLERANCE_RAD = Math.toRadians(4); // ~4°
 
     private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_WAIT, CLAW_ACTION, FINISHED }
@@ -631,31 +631,31 @@ public class BWBlueAuto extends OpMode {
 
             Spike2Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 78.000), new Pose(10.000, 78.000)))
+                    .addPath(new BezierLine(new Pose(46.000, 78.000), new Pose(8.000, 78.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Spike2ToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(10.000, 78.000), new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7)))
+                    .addPath(new BezierLine(new Pose(8.000, 78.000), new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), SHOOT_HEADING_RAD_7)
                     .build();
 
             ShootToSpike3 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7), new Pose(46.000, 56.000)))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7), new Pose(46.000, 59.000)))
                     .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_7, Math.toRadians(180))
                     .build();
 
             Spike3Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 56.000), new Pose(10.000, 56.000)))
+                    .addPath(new BezierLine(new Pose(46.000, 59.000), new Pose(10.000, 59.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Spike3ToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(10.000, 56.000), new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10)))
+                    .addPath(new BezierLine(new Pose(59.000, 56.000), new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), SHOOT_HEADING_RAD_10)
                     .build();
 
