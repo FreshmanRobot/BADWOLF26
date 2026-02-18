@@ -59,8 +59,9 @@ public class GateController {
         // Ensure gate open for intake
         setGateClosed(false);
 
-        // Start intake motor
-        intakeMotor.setPower(-intakePower);
+        // Start intake motor and set direction
+        intakeMotor.setDirection(DcMotor.Direction.REVERSE);
+        intakeMotor.setPower(intakePower);
     }
 
     // Update the sequence; returns true exactly once when it is time to trigger the claw.
