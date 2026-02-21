@@ -112,7 +112,7 @@ public class BadWolf extends LinearOpMode {
         targetRPM = 3300;
         clawServo.setPosition(0.0);
         leftHoodServo.setPosition(leftHoodPosition);
-
+//claw control
         clawController = new ClawController(clawServo, CLAW_OPEN, CLAW_CLOSED, CLAW_CLOSE_MS);
         gateController = new GateController(
                 gateServo, intakeMotor,
@@ -120,7 +120,7 @@ public class BadWolf extends LinearOpMode {
                 INTAKE_DURATION_MS, CLAW_TRIGGER_BEFORE_END_MS,
                 INTAKE_SEQUENCE_POWER
         );
-
+//gate control
         gateController.setGateClosed(false);
         gateServo.setPosition(GATE_CLOSED);
 
