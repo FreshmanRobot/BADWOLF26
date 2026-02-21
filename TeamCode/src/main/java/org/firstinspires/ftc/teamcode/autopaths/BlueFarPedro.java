@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.autopaths;
 
+import static java.lang.Thread.sleep;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
@@ -24,21 +26,19 @@ import org.firstinspires.ftc.teamcode.subsystems.FlywheelController;
 import org.firstinspires.ftc.teamcode.subsystems.GateController;
 
 /**
- * BWRedAuto – stabilized heading/pose lock at shoot pose + gate servo fix.
+ * BWBlueAuto – stabilized heading/pose lock at shoot pose + gate servo fix.
  */
-@Autonomous(name = "A 12 Ball Red", group = "Autonomous")
+@Autonomous(name = "Zaine - PedroBlueFar", group = "Autonomous")
 @Configurable
-public class BWRedAuto extends OpMode {
+public class BlueFarPedro extends OpMode {
 
     private TelemetryManager panelsTelemetry;
     public Follower follower;
     private Paths paths;
 
     // heading convergence for non‑turret robot
-    private static final double SHOOT_HEADING_RAD_1 = Math.toRadians(180-135);
-    private static final double SHOOT_HEADING_RAD_4 = Math.toRadians(180-142);
-    private static final double SHOOT_HEADING_RAD_7 = Math.toRadians(25);
-    private static final double SHOOT_HEADING_RAD_10 = Math.toRadians(15);
+    private static final double SHOOT_HEADING_RAD_1 = Math.toRadians(110);
+    private static final double SHOOT_HEADING_RAD_3 = Math.toRadians(110);
     private static final double HEADING_TOLERANCE_RAD = Math.toRadians(4); // ~4°
 
     private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_WAIT, CLAW_ACTION, FINISHED }
@@ -54,7 +54,7 @@ public class BWRedAuto extends OpMode {
     private static final double TIMED_INTAKE_SECONDS = 0.5;
     private boolean timedIntakeActive = false;
 
-    private double targetRPM = 3300;
+    private double targetRPM = 4000;
 
     private long clawActionStartMs = 0L;
     private static final long CLAW_CLOSE_MS = 250L;
@@ -106,17 +106,13 @@ public class BWRedAuto extends OpMode {
     private static final double INTAKE_SEQUENCE_POWER = 1.0;
     private int intakeSegmentEnd = -1;
 
-    private static final double SHOOT_POSE_X_1 = 146 - 48.0;
-    private static final double SHOOT_POSE_Y_1 = 96.0;
-    private static final double SHOOT_POSE_X_4 = 146- 48.0;
-    private static final double SHOOT_POSE_Y_4 = 96.0;
-    private static final double SHOOT_POSE_X_7 = 146 - 48.0;
-    private static final double SHOOT_POSE_Y_7 = 96.0;
-    private static final double SHOOT_POSE_X_10 = 146 - 48.0;
-    private static final double SHOOT_POSE_Y_10 = 96.0;
+    private static final double SHOOT_POSE_X_1 = 60.0;
+    private static final double SHOOT_POSE_Y_1 = 10.0;
+    private static final double SHOOT_POSE_X_3 = 60.0;
+    private static final double SHOOT_POSE_Y_3 = 10.0;
     private static final double START_POSE_TOLERANCE_IN = 6.0;
 
-    public BWRedAuto() {}
+    public BlueFarPedro() {}
 
     @Override
     public void init() {
@@ -191,21 +187,21 @@ public class BWRedAuto extends OpMode {
 
         try{
 
-        try {
-            hubImu = hardwareMap.get(BNO055IMU.class, "imu");
-            panelsTelemetry.debug("Init", "Found expansion hub IMU as 'imu'");
-        } catch (Exception e) {
-            hubImu = null;
-            panelsTelemetry.debug("Init", "Expansion hub IMU 'imu' not found: " + e.getMessage());
-        }
+            try {
+                hubImu = hardwareMap.get(BNO055IMU.class, "imu");
+                panelsTelemetry.debug("Init", "Found expansion hub IMU as 'imu'");
+            } catch (Exception e) {
+                hubImu = null;
+                panelsTelemetry.debug("Init", "Expansion hub IMU 'imu' not found: " + e.getMessage());
+            }
 
-        if (imu != null) {
-            BNO055IMU.Parameters imuParams = new BNO055IMU.Parameters();
-            imuParams.angleUnit = BNO055IMU.AngleUnit.RADIANS;
-            imuParams.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
-            imu.initialize(imuParams);}else {
-            panelsTelemetry.debug("Init", "No IMU found (neither 'pinpoint' nor 'imu'). Turret will not have heading data.");
-        }
+            if (imu != null) {
+                BNO055IMU.Parameters imuParams = new BNO055IMU.Parameters();
+                imuParams.angleUnit = BNO055IMU.AngleUnit.RADIANS;
+                imuParams.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+                imu.initialize(imuParams);}else {
+                panelsTelemetry.debug("Init", "No IMU found (neither 'pinpoint' nor 'imu'). Turret will not have heading data.");
+            }
         } catch (Exception e) {
             panelsTelemetry.debug("Init", "IMU not found or failed to init: " + e.getMessage());
         }
@@ -244,7 +240,7 @@ public class BWRedAuto extends OpMode {
     @Override
     public void init_loop() {
         // Keep odometry aligned to the known start pose
-        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)).mirror());
+        follower.setStartingPose(new Pose(60, 8, Math.toRadians(90)));
     }
 
     @Override
@@ -252,7 +248,7 @@ public class BWRedAuto extends OpMode {
         flywheel.setTargetRpm(targetRPM);
         startIntake();
         //stopIntake();
-        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)).mirror());
+        follower.setStartingPose(new Pose(60, 8, Math.toRadians(90)));
 
         shooterWaitStartMs = System.currentTimeMillis();
         state = AutoState.WAIT_FOR_SHOOTER;
@@ -325,31 +321,11 @@ public class BWRedAuto extends OpMode {
                 return Double.POSITIVE_INFINITY;
             }
         }
-        else if (currentPathIndex==4) {
+        else if (currentPathIndex==3) {
             try {
                 Pose p = follower.getPose();
-                double dx = p.getX() - SHOOT_POSE_X_4;
-                double dy = p.getY() - SHOOT_POSE_Y_4;
-                return Math.hypot(dx, dy);
-            } catch (Exception e) {
-                return Double.POSITIVE_INFINITY;
-            }
-        }
-        else if (currentPathIndex==7) {
-            try {
-                Pose p = follower.getPose();
-                double dx = p.getX() - SHOOT_POSE_X_7;
-                double dy = p.getY() - SHOOT_POSE_Y_7;
-                return Math.hypot(dx, dy);
-            } catch (Exception e) {
-                return Double.POSITIVE_INFINITY;
-            }
-        }
-        else if (currentPathIndex==10) {
-            try {
-                Pose p = follower.getPose();
-                double dx = p.getX() - SHOOT_POSE_X_10;
-                double dy = p.getY() - SHOOT_POSE_Y_10;
+                double dx = p.getX() - SHOOT_POSE_X_3;
+                double dy = p.getY() - SHOOT_POSE_Y_3;
                 return Math.hypot(dx, dy);
             } catch (Exception e) {
                 return Double.POSITIVE_INFINITY;
@@ -362,7 +338,7 @@ public class BWRedAuto extends OpMode {
 
 
     private void startPath(int idx) {
-        if (idx < 1 || idx > 11) {
+        if (idx < 1 || idx > 4) {
             currentPathIndex = 0;
             state = AutoState.FINISHED;
             return;
@@ -370,13 +346,11 @@ public class BWRedAuto extends OpMode {
 
 
         // for spikes +target
-        if (idx == 2) { intakeSegmentEnd = 3; startIntake(); clawServo.setPosition(CLAW_OPEN); targetRPM=3300;}
-        else if (idx == 5) { intakeSegmentEnd = 6; startIntake(); clawServo.setPosition(CLAW_OPEN); targetRPM=3000;}
-        else if (idx == 8) { intakeSegmentEnd = 9; startIntake();  clawServo.setPosition(CLAW_OPEN); targetRPM=3000;}
+        if (idx == 2) { intakeSegmentEnd = 3; startIntake(); clawServo.setPosition(CLAW_OPEN); targetRPM=4000;}
 
 
         //shoot
-        if (idx==1 || idx == 4 || idx == 7 || idx == 10) {
+        if (idx==1 || idx == 3) {
             startIntake();
             timedIntakeTimer.resetTimer();
             timedIntakeActive = true;
@@ -384,17 +358,10 @@ public class BWRedAuto extends OpMode {
         }
 
         switch (idx) {
-            case 1: follower.followPath(paths.StartToShoot); break;
-            case 2: follower.followPath(paths.ShootToSpike1); break;
-            case 3: follower.followPath(paths.Spike1Colect); break;
-            case 4: follower.followPath(paths.Spike1ToShoot); break;
-            case 5: follower.followPath(paths.ShootToSpike2); break;
-            case 6: follower.followPath(paths.Spike2Colect); break;
-            case 7: follower.followPath(paths.Spike2ToShoot); break;
-            case 8: follower.followPath(paths.ShootToSpike3); break;
-            case 9: follower.followPath(paths.Spike3Colect); break;
-            case 10: follower.followPath(paths.Spike3ToShoot); break;
-            case 11: follower.followPath(paths.ShootToStart); break;
+            case 1: follower.followPath(paths.Path1); break;
+            case 2: follower.followPath(paths.Path2); break;
+            case 3: follower.followPath(paths.Path3); break;
+            case 4: follower.followPath(paths.Path4); break;
             default: break;
         }
 
@@ -440,7 +407,7 @@ public class BWRedAuto extends OpMode {
                         state = AutoState.PRE_ACTION;
                     } else {
                         int next = finished + 1;
-                        if (next > 11) {
+                        if (next > 4) {
                             state = AutoState.FINISHED;
                         } else {
                             startPath(next);
@@ -463,10 +430,8 @@ public class BWRedAuto extends OpMode {
                     double dist = distanceToShootPose();
                     double targetHeading;
 
-                    if (currentPathIndex == 1)      targetHeading = SHOOT_HEADING_RAD_1;
-                    else if (currentPathIndex == 4) targetHeading = SHOOT_HEADING_RAD_4;
-                    else if (currentPathIndex == 7) targetHeading = SHOOT_HEADING_RAD_7;
-                    else if (currentPathIndex == 10) targetHeading = SHOOT_HEADING_RAD_10;
+                    if (currentPathIndex == 2)      targetHeading = SHOOT_HEADING_RAD_1;
+                    else if (currentPathIndex == 3) targetHeading = SHOOT_HEADING_RAD_3;
                     else targetHeading = SHOOT_HEADING_RAD_1; // fallback
 
                     double headingErr = headingErrorRad(
@@ -486,26 +451,10 @@ public class BWRedAuto extends OpMode {
                                 // If follower lacks setPose(), remove this call
                             }
                         }
-                        else if (currentPathIndex==4){
+                        else if (currentPathIndex==3){
                             try {
                                 // Snap odometry to known shoot pose (position + heading) to remove drift
-                                follower.setPose(new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4, SHOOT_HEADING_RAD_4));
-                            } catch (Exception ignored) {
-                                // If follower lacks setPose(), remove this call
-                            }
-                        }
-                        else if (currentPathIndex==7){
-                            try {
-                                // Snap odometry to known shoot pose (position + heading) to remove drift
-                                follower.setPose(new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7, SHOOT_HEADING_RAD_7));
-                            } catch (Exception ignored) {
-                                // If follower lacks setPose(), remove this call
-                            }
-                        }
-                        else if (currentPathIndex==10){
-                            try {
-                                // Snap odometry to known shoot pose (position + heading) to remove drift
-                                follower.setPose(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10, SHOOT_HEADING_RAD_10));
+                                follower.setPose(new Pose(SHOOT_POSE_X_3, SHOOT_POSE_Y_3, SHOOT_HEADING_RAD_3));
                             } catch (Exception ignored) {
                                 // If follower lacks setPose(), remove this call
                             }
@@ -550,12 +499,12 @@ public class BWRedAuto extends OpMode {
                 }
 
                 if (nowMs - clawActionStartMs >= 207) {
-                        //for max
+                    //for max
 
                     clawServo.setPosition(CLAW_OPEN);
                     clawActionStartMs = 0;
 
-                    if (nextPathIndex > 0 && nextPathIndex <= 11) {
+                    if (nextPathIndex > 0 && nextPathIndex <= 4) {
                         if (gateServo != null) {
                             gateServo.setPosition(GATE_CLOSED);
                         }
@@ -585,84 +534,51 @@ public class BWRedAuto extends OpMode {
     }
 
     public static class Paths {
-        public PathChain StartToShoot;
-        public PathChain ShootToSpike1;
-        public PathChain Spike1Colect;
-        public PathChain Spike1ToShoot;
-        public PathChain ShootToSpike2;
-        public PathChain Spike2Colect;
-        public PathChain Spike2ToShoot;
-        public PathChain ShootToSpike3;
-        public PathChain Spike3Colect;
-        public PathChain Spike3ToShoot;
-        public PathChain ShootToStart;
+        public PathChain Path1;
+        public PathChain Path2;
+        public PathChain Path3;
+        public PathChain Path4;
 
         public Paths(Follower follower) {
-            StartToShoot = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(20.000, 122.000).mirror(), new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1)))
-                    .setLinearHeadingInterpolation(Math.toRadians(45), SHOOT_HEADING_RAD_1)
+            Path1 = follower.pathBuilder()
+                    .addPath(
+                            new BezierLine(
+                                    new Pose(60.000, 8.000),
+                                    new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1)
+                            )
+                    )
+                    .setLinearHeadingInterpolation(Math.toRadians(90), SHOOT_HEADING_RAD_1)
                     .build();
 
-            ShootToSpike1 = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1), new Pose(45.000, 91.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_1, Math.toRadians(0))
+            Path2 = follower.pathBuilder()
+                    .addPath(
+                            new BezierLine(
+                                    new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1),
+                                    new Pose(10.000, 8.600)
+                            )
+                    )
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_1, Math.toRadians(180))
                     .build();
 
-            Spike1Colect = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(44.000, 91.000).mirror(), new Pose(13.000, 91.000).mirror()))
-                    .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(0))
+            Path3 = follower.pathBuilder()
+                    .addPath(
+                            new BezierLine(
+                                    new Pose(10.000, 8.600),
+                                    new Pose(SHOOT_POSE_X_3, SHOOT_POSE_Y_3)
+                            )
+                    )
+                    .setLinearHeadingInterpolation(Math.toRadians(180), SHOOT_HEADING_RAD_3)
                     .build();
 
-            Spike1ToShoot = follower                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(13.000, 91.000).mirror(), new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4)))
-                    .setLinearHeadingInterpolation(Math.toRadians(0), SHOOT_HEADING_RAD_4)
+            Path4 = follower.pathBuilder()
+                    .addPath(
+                            new BezierLine(
+                                    new Pose(SHOOT_POSE_X_3, SHOOT_POSE_Y_3),
+                                    new Pose(30.000, 10.000)
+                            )
+                    )
+                    .setTangentHeadingInterpolation()
                     .build();
-
-            ShootToSpike2 = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4), new Pose(46.000, 72.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_4, Math.toRadians(0))
-                    .build();
-
-            Spike2Colect = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 72.000).mirror(), new Pose(/*10*/7.000, 76.000).mirror()))
-                    .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(0))
-                    .build();
-
-            Spike2ToShoot = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(7.000, 76.000).mirror(), new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7)))
-                    .setLinearHeadingInterpolation(Math.toRadians(0), SHOOT_HEADING_RAD_7)
-                    .build();
-
-            ShootToSpike3 = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7), new Pose(46.000, 53.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_7, Math.toRadians(0))
-                    .build();
-
-            Spike3Colect = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 56.000).mirror(), new Pose(/*10*/7.000, 56.000).mirror()))
-                    .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(0))
-                    .build();
-
-            Spike3ToShoot = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(7.000, 56.000).mirror(), new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10)))
-                    .setLinearHeadingInterpolation(Math.toRadians(0), SHOOT_HEADING_RAD_10)
-                    .build();
-
-            ShootToStart = follower
-                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(40.000, 122.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_10, Math.toRadians(45))
-                    .build();
-
         }
     }
 }
