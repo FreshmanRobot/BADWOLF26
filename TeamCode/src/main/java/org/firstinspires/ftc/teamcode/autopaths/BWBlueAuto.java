@@ -632,13 +632,13 @@ public class BWBlueAuto extends OpMode {
 
             Spike2Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 72.000), new Pose(8.000, /*78*/72.000)))
+                    .addPath(new BezierLine(new Pose(46.000, 72.000), new Pose(/*8*/10.000, /*78*/72.000)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
                     .build();
 
             Spike2ToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(8.000, 72.000), new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7)))
+                    .addPath(new BezierLine(new Pose(10.000, 72.000), new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7)))
                     .setLinearHeadingInterpolation(Math.toRadians(180), SHOOT_HEADING_RAD_7)
                     .build();
 
