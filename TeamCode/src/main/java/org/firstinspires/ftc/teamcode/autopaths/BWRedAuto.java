@@ -35,10 +35,10 @@ public class BWRedAuto extends OpMode {
     private Paths paths;
 
     // heading convergence for non‑turret robot
-    private static final double SHOOT_HEADING_RAD_1 = Math.toRadians(-135);
-    private static final double SHOOT_HEADING_RAD_4 = Math.toRadians(-142);
-    private static final double SHOOT_HEADING_RAD_7 = Math.toRadians(-144);
-    private static final double SHOOT_HEADING_RAD_10 = Math.toRadians(-140);
+    private static final double SHOOT_HEADING_RAD_1 = Math.toRadians(180-135);
+    private static final double SHOOT_HEADING_RAD_4 = Math.toRadians(180-142);
+    private static final double SHOOT_HEADING_RAD_7 = Math.toRadians(25);
+    private static final double SHOOT_HEADING_RAD_10 = Math.toRadians(15);
     private static final double HEADING_TOLERANCE_RAD = Math.toRadians(4); // ~4°
 
     private enum AutoState { IDLE, WAIT_FOR_SHOOTER, RUNNING_PATH, PRE_ACTION, INTAKE_WAIT, CLAW_ACTION, FINISHED }
@@ -101,19 +101,19 @@ public class BWRedAuto extends OpMode {
     private static final double GATE_OPEN = 0.28;
     private static final double GATE_CLOSED = 0.60;
 
-    private static final long INTAKE_DURATION_MS = 1200;
+    private static final long INTAKE_DURATION_MS = 800;
     private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
     private static final double INTAKE_SEQUENCE_POWER = 1.0;
     private int intakeSegmentEnd = -1;
 
-    private static final double SHOOT_POSE_X_1 = 48.0;
-    private static final double SHOOT_POSE_Y_1 = 144-96.0;
-    private static final double SHOOT_POSE_X_4 = 48.0;
-    private static final double SHOOT_POSE_Y_4 = 144-96.0;
-    private static final double SHOOT_POSE_X_7 = 46.0;
-    private static final double SHOOT_POSE_Y_7 = 144-94.0;
-    private static final double SHOOT_POSE_X_10 = 42.0;
-    private static final double SHOOT_POSE_Y_10 = 144-90.0;
+    private static final double SHOOT_POSE_X_1 = 146 - 48.0;
+    private static final double SHOOT_POSE_Y_1 = 96.0;
+    private static final double SHOOT_POSE_X_4 = 146- 48.0;
+    private static final double SHOOT_POSE_Y_4 = 96.0;
+    private static final double SHOOT_POSE_X_7 = 146 - 48.0;
+    private static final double SHOOT_POSE_Y_7 = 96.0;
+    private static final double SHOOT_POSE_X_10 = 146 - 48.0;
+    private static final double SHOOT_POSE_Y_10 = 96.0;
     private static final double START_POSE_TOLERANCE_IN = 6.0;
 
     public BWRedAuto() {}
@@ -244,7 +244,7 @@ public class BWRedAuto extends OpMode {
     @Override
     public void init_loop() {
         // Keep odometry aligned to the known start pose
-        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
+        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)).mirror());
     }
 
     @Override
@@ -252,7 +252,7 @@ public class BWRedAuto extends OpMode {
         flywheel.setTargetRpm(targetRPM);
         startIntake();
         //stopIntake();
-        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)));
+        follower.setStartingPose(new Pose(20, 122, Math.toRadians(135)).mirror());
 
         shooterWaitStartMs = System.currentTimeMillis();
         state = AutoState.WAIT_FOR_SHOOTER;
@@ -601,66 +601,66 @@ public class BWRedAuto extends OpMode {
             StartToShoot = follower
                     .pathBuilder()
                     .addPath(new BezierLine(new Pose(20.000, 122.000).mirror(), new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1)))
-                    .setLinearHeadingInterpolation(Math.toRadians(-135), SHOOT_HEADING_RAD_1)
+                    .setLinearHeadingInterpolation(Math.toRadians(45), SHOOT_HEADING_RAD_1)
                     .build();
 
             ShootToSpike1 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1), new Pose(45.000, 93.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_1, Math.toRadians(-180))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1), new Pose(45.000, 91.000).mirror()))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_1, Math.toRadians(0))
                     .build();
 
             Spike1Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(44.000, 93.000).mirror(), new Pose(15.000, 93.000).mirror()))
-                    .setLinearHeadingInterpolation(Math.toRadians(-180), Math.toRadians(-180))
+                    .addPath(new BezierLine(new Pose(44.000, 91.000).mirror(), new Pose(13.000, 91.000).mirror()))
+                    .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(0))
                     .build();
 
             Spike1ToShoot = follower                    .pathBuilder()
-                    .addPath(new BezierLine(new Pose(15.000, 93.000).mirror(), new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4)))
-                    .setLinearHeadingInterpolation(Math.toRadians(-180), SHOOT_HEADING_RAD_4)
+                    .addPath(new BezierLine(new Pose(13.000, 91.000).mirror(), new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4)))
+                    .setLinearHeadingInterpolation(Math.toRadians(0), SHOOT_HEADING_RAD_4)
                     .build();
 
             ShootToSpike2 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4), new Pose(46.000, 78.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_4, Math.toRadians(-180))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_4, SHOOT_POSE_Y_4), new Pose(46.000, 72.000).mirror()))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_4, Math.toRadians(0))
                     .build();
 
             Spike2Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 78.000).mirror(), new Pose(10.000, 78.000).mirror()))
-                    .setLinearHeadingInterpolation(Math.toRadians(-180), Math.toRadians(-180))
+                    .addPath(new BezierLine(new Pose(46.000, 72.000).mirror(), new Pose(/*10*/7.000, 72.000).mirror()))
+                    .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(0))
                     .build();
 
             Spike2ToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(10.000, 78.000).mirror(), new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7)))
-                    .setLinearHeadingInterpolation(Math.toRadians(-180), SHOOT_HEADING_RAD_7)
+                    .addPath(new BezierLine(new Pose(7.000, 72.000).mirror(), new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7)))
+                    .setLinearHeadingInterpolation(Math.toRadians(0), SHOOT_HEADING_RAD_7)
                     .build();
 
             ShootToSpike3 = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7), new Pose(46.000, 56.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_7, Math.toRadians(-180))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_7, SHOOT_POSE_Y_7), new Pose(46.000, 46.000).mirror()))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_7, Math.toRadians(0))
                     .build();
 
             Spike3Colect = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(46.000, 56.000).mirror(), new Pose(10.000, 56.000).mirror()))
-                    .setLinearHeadingInterpolation(Math.toRadians(-180), Math.toRadians(-180))
+                    .addPath(new BezierLine(new Pose(46.000, 46.000).mirror(), new Pose(/*10*/7.000, 46.000).mirror()))
+                    .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(0))
                     .build();
 
             Spike3ToShoot = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(10.000, 56.000).mirror(), new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10)))
-                    .setLinearHeadingInterpolation(Math.toRadians(-180), SHOOT_HEADING_RAD_10)
+                    .addPath(new BezierLine(new Pose(7.000, 46.000).mirror(), new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10)))
+                    .setLinearHeadingInterpolation(Math.toRadians(0), SHOOT_HEADING_RAD_10)
                     .build();
 
             ShootToStart = follower
                     .pathBuilder()
                     .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(40.000, 122.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_10, Math.toRadians(-135))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_10, Math.toRadians(45))
                     .build();
 
         }
