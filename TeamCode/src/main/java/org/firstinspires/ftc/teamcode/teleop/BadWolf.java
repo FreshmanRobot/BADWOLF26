@@ -216,12 +216,16 @@ public class BadWolf extends LinearOpMode {
                 // Stop aligning if tolerance reached or timeout
                 if (Math.abs(error) < angleTolerance || alignTimer.seconds() > alignTimeout) {
                     // Brake robot at heading
-                    frontLeftDrive.setPower(0);
-                    backLeftDrive.setPower(0);
-                    frontRightDrive.setPower(0);
-                    backRightDrive.setPower(0);
-                    sleep(150); // Brief brake to stabilize
-                    xImuAlignActive = false;
+                    double StartTime=currentTime;
+                    if (currentTime>=StartTime+150) {
+                        frontLeftDrive.setPower(0);
+                        backLeftDrive.setPower(0);
+                        frontRightDrive.setPower(0);
+                        backRightDrive.setPower(0);
+                    }
+                    else {
+                        xImuAlignActive = false;
+                    }
                 }
                 lastImuError = error;
                 lastImuTime = currentTime;
