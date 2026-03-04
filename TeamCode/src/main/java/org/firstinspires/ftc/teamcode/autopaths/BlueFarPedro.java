@@ -28,7 +28,7 @@ import org.firstinspires.ftc.teamcode.subsystems.GateController;
 /**
  * BWBlueAuto – stabilized heading/pose lock at shoot pose + gate servo fix.
  */
-@Autonomous(name = "Pedro Blue Far", group = "Autonomous")
+@Autonomous(name = "Zaine - PedroBlueFar", group = "Autonomous")
 @Configurable
 public class BlueFarPedro extends OpMode {
 
@@ -111,7 +111,6 @@ public class BlueFarPedro extends OpMode {
     private static final double SHOOT_POSE_X_3 = 60.0;
     private static final double SHOOT_POSE_Y_3 = 10.0;
     private static final double START_POSE_TOLERANCE_IN = 6.0;
-
 
     public BlueFarPedro() {}
 
@@ -306,9 +305,23 @@ public class BlueFarPedro extends OpMode {
         }
     }
 
+    private void e(long duration, long stoppage) {
+        stopIntake();
+        intakeMotor.setPower(0.8);
+        long start = System.currentTimeMillis();
+        startIntake();
+        while (System.currentTimeMillis() - start < duration) {
+        }
+        start = System.currentTimeMillis();
+        stopIntake();
+        while (System.currentTimeMillis() - start < stoppage) {
+        }
+        intakeMotor.setPower(1.0);
+    }
+
     //if pathIndex is listed then run PRE_ACTION
     private boolean endsAtShoot(int pathIndex) {
-        return pathIndex == 1 || pathIndex == 3;
+        return pathIndex == 1 || pathIndex == 4 || pathIndex == 7 || pathIndex == 10;
     }
 
     private double distanceToShootPose() {
@@ -472,8 +485,7 @@ public class BlueFarPedro extends OpMode {
                     }
                 } else {
                     if (preActionTimer.getElapsedTimeSeconds() >= PRE_ACTION_WAIT_SECONDS) {
-                        //startIntake();
-                        intakeMotor.setPower(0.0);
+                        stopIntake();
                         gateServo.setPosition(GATE_OPEN);
                         intakeTimer.resetTimer();
                         state = AutoState.INTAKE_WAIT;
@@ -483,34 +495,14 @@ public class BlueFarPedro extends OpMode {
             }
 
             case INTAKE_WAIT: {
-                if (flywheel.getCurrentRPM()>=3950) {
-                    intakeMotor.setPower(1.0);
+                for (int i = 0; i < 2; i++) {
+                    e(200, 700);
                 }
-                else {
-                    intakeMotor.setPower(0.0);
-                    long t = System.currentTimeMillis();
-                    long i = System.currentTimeMillis();
-                    while (i - t >= 200) {
-                        i = System.currentTimeMillis();
-                    }
-
-                }
-                if (intakeTimer.getElapsedTimeSeconds() >= INTAKE_WAIT_SECONDS) {
-                    if (intakeSegmentEnd == -1) {
-                        //stopIntake();
-                    }
-                    state = AutoState.CLAW_ACTION;
-                }
-                /*for (int x = 0; x < 3; x++) {
-
-                    while (nowMs )
-                }
-                state = AutoState.CLAW_ACTION;*/
-                break;
+                state = AutoState.CLAW_ACTION;
             }
 
             case CLAW_ACTION: {
-
+                startIntake();
                 if (clawActionStartMs == 0) {
                     clawActionStartMs = nowMs;
                     clawServo.setPosition(CLAW_CLOSED);
@@ -572,7 +564,7 @@ public class BlueFarPedro extends OpMode {
                     .addPath(
                             new BezierLine(
                                     new Pose(SHOOT_POSE_X_1, SHOOT_POSE_Y_1),
-                                    new Pose(20.000, 8.600)
+                                    new Pose(10.000, 8.600)
                             )
                     )
                     .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_1, Math.toRadians(180))
@@ -581,7 +573,7 @@ public class BlueFarPedro extends OpMode {
             Path3 = follower.pathBuilder()
                     .addPath(
                             new BezierLine(
-                                    new Pose(20.000, 8.600),
+                                    new Pose(10.000, 8.600),
                                     new Pose(SHOOT_POSE_X_3, SHOOT_POSE_Y_3)
                             )
                     )
