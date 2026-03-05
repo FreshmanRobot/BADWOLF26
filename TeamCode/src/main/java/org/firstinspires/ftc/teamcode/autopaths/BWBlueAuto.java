@@ -105,7 +105,7 @@ public class BWBlueAuto extends OpMode {
 
     private static final long INTAKE_DURATION_MS = 800;
     private static final long CLAW_TRIGGER_BEFORE_END_MS = 100;
-    private static final double INTAKE_SEQUENCE_POWER = 1.0;
+    private static final double INTAKE_SEQUENCE_POWER = 0.85;
     private int intakeSegmentEnd = -1;
 
     private static final double SHOOT_POSE_X_1 = 48.0;
