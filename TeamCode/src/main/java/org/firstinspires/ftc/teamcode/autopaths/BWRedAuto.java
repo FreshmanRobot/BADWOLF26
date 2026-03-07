@@ -659,8 +659,8 @@ public class BWRedAuto extends OpMode {
 
             ShootToStart = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(40.000, 122.000).mirror()))
-                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_10, Math.toRadians(45))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(40.000, 128.000).mirror()))
+                    .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_10, Math.toRadians(0))
                     .build();
 
         }
