@@ -192,11 +192,12 @@ public class BadWolf extends LinearOpMode {
                 //double Theta = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
                 if (!isBlue) {
                     isBlue = true;
-                    follower.setPose(new Pose(20, 122, Math.toRadians(135)));
+                    follower.setPose(new Pose(40, 128, Math.toRadians(0)));
+                    imu.resetYaw();
                 }
                 else {
                     isBlue = false;
-                    follower.setPose(new Pose(20, 122, Math.toRadians(135)).mirror());
+                    follower.setPose(new Pose(40, 128, Math.toRadians(180)).mirror());
                 }
             }
             aPressedLast = aNow;
@@ -247,7 +248,10 @@ public class BadWolf extends LinearOpMode {
             leftBumperLast = leftBumperNow;
 
             boolean rightBumperNow = gamepad1.right_bumper || gamepad2.right_bumper;
-            if (rightBumperNow && !rightBumperLast) imu.resetYaw();
+            if (rightBumperNow && !rightBumperLast) {
+
+                //imu.resetYaw();
+            }
             rightBumperLast = rightBumperNow;
 
             frontLeftDrive.setPower(frontLeftPower * driveScale - IMUAlign.getTurnPower());
