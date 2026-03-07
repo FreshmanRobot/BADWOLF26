@@ -1,20 +1,26 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
+import com.pedropathing.follower.Follower;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.ClawController;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelController;
 import org.firstinspires.ftc.teamcode.subsystems.GateController;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.subsystems.IMUAlign;
+
+import com.pedropathing.geometry.Pose;
 
 @TeleOp(name="A Bad Wolf Official ", group="Linear OpMode")
 public class BadWolf extends LinearOpMode {
@@ -64,7 +70,7 @@ public class BadWolf extends LinearOpMode {
 
     // precision driving
     private double driveScale = 1.0;
-    private static final double PRECISION_SCALE = 0.25;
+    private static final double PRECISION_SCALE = 0.5;
     private boolean leftBumperLast = false;
     private boolean rightBumperLast = false;
 
@@ -78,6 +84,9 @@ public class BadWolf extends LinearOpMode {
     // These allow for braking strength and tolerance logic
     private double lastImuError = 0;
     private double lastImuTime = 0;
+    private static final double ConstantLock = 20;
+    private boolean isBlue = true;
+    public Follower follower;
 
     @Override
     public void runOpMode() {
@@ -105,6 +114,7 @@ public class BadWolf extends LinearOpMode {
 
         GateController gateController;
         ClawController clawController;
+        IMUAlign IMUAlign;
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
@@ -120,6 +130,16 @@ public class BadWolf extends LinearOpMode {
                 INTAKE_DURATION_MS, CLAW_TRIGGER_BEFORE_END_MS,
                 INTAKE_SEQUENCE_POWER
         );
+        IMUAlign = new IMUAlign(
+        isBlue, imuAlignAngle,
+        lastImuTime,
+        targetRPM,
+        frontLeftDrive,
+        backLeftDrive,
+        frontRightDrive,
+        backRightDrive,
+        imu
+        );
 //gate control
         gateController.setGateClosed(false);
         gateServo.setPosition(GATE_CLOSED);
@@ -132,6 +152,7 @@ public class BadWolf extends LinearOpMode {
         } catch (Exception ignored) {}
 
         flywheel = new FlywheelController(shooterEx, shooter2, telemetry, voltageSensor);
+        follower = Constants.createFollower(hardwareMap);
         flywheel.setTargetRpm(targetRPM);
         flywheel.setShooterOn(true);
 
@@ -161,12 +182,21 @@ public class BadWolf extends LinearOpMode {
         final double alignTimeout = 1.5; // seconds
 
         while (opModeIsActive()) {
+            follower.update();
             long nowMs = System.currentTimeMillis();
 
             // ---------- Relocalize (A) - reference heading store/restore --------------
             boolean aNow = gamepad1.a || gamepad2.a;
             if (aNow && !aPressedLast && imu != null) {
-                imuAlignAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+                double Theta = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+                if (Theta >= -90 && Theta <= 90) {
+                    isBlue = true;
+                    follower.setPose(new Pose(20, 122, Math.toRadians(135)));
+                }
+                else {
+                    isBlue = false;
+                    follower.setPose(new Pose(20, 122, Math.toRadians(135)).mirror());
+                }
             }
             aPressedLast = aNow;
 
@@ -174,63 +204,20 @@ public class BadWolf extends LinearOpMode {
             boolean xNow = gamepad1.x || gamepad2.x;
             // Enter IMU align on X pressed (not held)
             if (xNow && !xPressedLast && imu != null) {
-                xImuAlignActive = true;
+                if (!xImuAlignActive) {
+                    xImuAlignActive = true;
+                    double currentTime = alignTimer.seconds();
+                    IMUAlign.IMUOn(currentTime);
+                }
+                else {
+                    xImuAlignActive = false;
+                    IMUAlign.IMUOff();
+                }
                 alignTimer.reset();
                 lastImuError = 0;
                 lastImuTime = alignTimer.seconds();
             }
             xPressedLast = xNow;
-            if (xImuAlignActive && imu != null) {
-                // --- Improved align logic with P+D controller and braking ---
-                double currentTime = alignTimer.seconds();
-                double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
-                double error = imuAlignAngle - imuAngle;
-
-                // Derivative calculation for braking (damping)
-                double deltaTime = currentTime - lastImuTime;
-                double derivative = 0;
-                if (deltaTime > 0) derivative = (error - lastImuError) / deltaTime;
-
-                double turnPower = kP * error + kD * derivative;
-
-                // Clamp for minimum power for large error, but stop for small error
-                if (Math.abs(turnPower) < minPower && Math.abs(error) > angleTolerance) {
-                    turnPower = Math.signum(turnPower) * minPower;
-                }
-                if (Math.abs(error) < angleTolerance) {
-                    turnPower = 0;
-                }
-
-                // Apply rotation power
-                frontLeftDrive.setPower(-turnPower);
-                backLeftDrive.setPower(-turnPower);
-                frontRightDrive.setPower(turnPower);
-                backRightDrive.setPower(turnPower);
-
-                telemetry.addData("IMU Angle", imuAngle);
-                telemetry.addData("Target Angle", imuAlignAngle);
-                telemetry.addData("Error", error);
-                telemetry.addData("Turn Power", turnPower);
-                telemetry.update();
-
-                // Stop aligning if tolerance reached or timeout
-                if (Math.abs(error) < angleTolerance || alignTimer.seconds() > alignTimeout) {
-                    // Brake robot at heading
-                    double StartTime=currentTime;
-                    if (currentTime>=StartTime+150) {
-                        frontLeftDrive.setPower(0);
-                        backLeftDrive.setPower(0);
-                        frontRightDrive.setPower(0);
-                        backRightDrive.setPower(0);
-                    }
-                    else {
-                        xImuAlignActive = false;
-                    }
-                }
-                lastImuError = error;
-                lastImuTime = currentTime;
-                continue; // skip rest of loop when aligning
-            }
 
             // DRIVE LOGIC (usual)
             double y = -gamepad1.left_stick_y;
@@ -251,10 +238,10 @@ public class BadWolf extends LinearOpMode {
             if (rightBumperNow && !rightBumperLast) driveScale = 1.0;
             rightBumperLast = rightBumperNow;
 
-            frontLeftDrive.setPower(frontLeftPower * driveScale);
-            backLeftDrive.setPower(backLeftPower * driveScale);
-            frontRightDrive.setPower(frontRightPower * driveScale);
-            backRightDrive.setPower(backRightPower * driveScale);
+            frontLeftDrive.setPower(frontLeftPower * driveScale - IMUAlign.getTurnPower());
+            backLeftDrive.setPower(backLeftPower * driveScale - IMUAlign.getTurnPower());
+            frontRightDrive.setPower(frontRightPower * driveScale + IMUAlign.getTurnPower());
+            backRightDrive.setPower(backRightPower * driveScale + IMUAlign.getTurnPower());
 
             // SHOOTER CONTROLS (same gamepad mapping preserved)
             boolean dpadDownNow = gamepad1.dpad_down || gamepad2.dpad_down;
@@ -319,7 +306,15 @@ public class BadWolf extends LinearOpMode {
             if (shouldTriggerClaw) clawController.trigger(nowMs);
 
             // --- Flywheel PIDF update ---
-            flywheel.setTargetRpm(targetRPM);
+            if (xImuAlignActive) {
+                Pose p = follower.getPose();
+                double currentTime = alignTimer.seconds();
+                IMUAlign.IMUOn(currentTime);
+                flywheel.setTargetRpm(IMUAlign.IMUTarget(p.getX(), p.getY()));
+            }
+            else {
+                flywheel.setTargetRpm(targetRPM);
+            }
             flywheel.update();
 
             // Rumble at target using FlywheelController isAtTarget()
@@ -337,6 +332,7 @@ public class BadWolf extends LinearOpMode {
             if (backNow && !backPressedLast) clawController.trigger(nowMs);
             backPressedLast = backNow;
             clawController.update(nowMs);
+            Pose p = follower.getPose();
 
             telemetry.addData("Gate Pos", gateServo.getPosition());
             telemetry.addData("RPM", "%.1f", flywheel.getCurrentRPM());
@@ -344,6 +340,10 @@ public class BadWolf extends LinearOpMode {
             telemetry.addData("Shooter Power", "%.3f", flywheel.getLastAppliedPower());
             telemetry.addData("PIDF Mode", flywheel.isUsingFarCoefficients() ? "FAR" : "CLOSE");
             telemetry.addData("IMU Reference Angle", imuAlignAngle);
+            telemetry.addData("X", p.getX());
+            telemetry.addData("Y", p.getY());
+            telemetry.addData("isBlue?", isBlue);
+            telemetry.addData("Current Angle",imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
             telemetry.update();
         }
     }
