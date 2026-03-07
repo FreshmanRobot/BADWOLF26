@@ -87,6 +87,7 @@ public class BadWolf extends LinearOpMode {
     private static final double ConstantLock = 20;
     private boolean isBlue = true;
     public Follower follower;
+    private boolean slow = false;
 
     @Override
     public void runOpMode() {
@@ -188,8 +189,8 @@ public class BadWolf extends LinearOpMode {
             // ---------- Relocalize (A) - reference heading store/restore --------------
             boolean aNow = gamepad1.a || gamepad2.a;
             if (aNow && !aPressedLast && imu != null) {
-                double Theta = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
-                if (Theta >= -90 && Theta <= 90) {
+                //double Theta = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+                if (!isBlue) {
                     isBlue = true;
                     follower.setPose(new Pose(20, 122, Math.toRadians(135)));
                 }
@@ -207,7 +208,9 @@ public class BadWolf extends LinearOpMode {
                 if (!xImuAlignActive) {
                     xImuAlignActive = true;
                     double currentTime = alignTimer.seconds();
-                    IMUAlign.IMUOn(currentTime);
+                    Pose p = follower.getPose();
+                    double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+                    IMUAlign.IMUOn(currentTime, p.getX(), p.getY(), imuAngle);
                 }
                 else {
                     xImuAlignActive = false;
@@ -231,11 +234,20 @@ public class BadWolf extends LinearOpMode {
             double backRightPower = (y + x - rx) / denominator;
 
             boolean leftBumperNow = gamepad1.left_bumper || gamepad2.left_bumper;
-            if (leftBumperNow && !leftBumperLast) driveScale = PRECISION_SCALE;
+            if (leftBumperNow && !leftBumperLast) {
+                if (slow) {
+                    driveScale = 1.0;
+                    slow = false;
+                }
+                else{
+                    driveScale = PRECISION_SCALE;
+                    slow = true;
+                }
+            }
             leftBumperLast = leftBumperNow;
 
             boolean rightBumperNow = gamepad1.right_bumper || gamepad2.right_bumper;
-            if (rightBumperNow && !rightBumperLast) driveScale = 1.0;
+            if (rightBumperNow && !rightBumperLast) imu.resetYaw();
             rightBumperLast = rightBumperNow;
 
             frontLeftDrive.setPower(frontLeftPower * driveScale - IMUAlign.getTurnPower());
@@ -309,7 +321,8 @@ public class BadWolf extends LinearOpMode {
             if (xImuAlignActive) {
                 Pose p = follower.getPose();
                 double currentTime = alignTimer.seconds();
-                IMUAlign.IMUOn(currentTime);
+                double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+                IMUAlign.IMUOn(currentTime, p.getX(), p.getY(), imuAngle);
                 flywheel.setTargetRpm(IMUAlign.IMUTarget(p.getX(), p.getY()));
             }
             else {

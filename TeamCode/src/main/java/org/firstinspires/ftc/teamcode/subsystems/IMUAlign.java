@@ -21,7 +21,7 @@ public class IMUAlign {
     final double angleTolerance = 1.5; // Degrees, when to stop
     final double velocityTolerance = 0.2; // Not used as encoder velocity not available on DcMotor (non-Ex)
     final double alignTimeout = 1.5; // seconds
-    private static final double ConstantLock = 20; //contant multiplyer for RPM conversion
+    private static final double ConstantLock = 40; //contant multiplyer for RPM conversion
     private final DcMotor frontLeftDrive;
     private final DcMotor backLeftDrive;
     private final DcMotor frontRightDrive;
@@ -49,16 +49,14 @@ public class IMUAlign {
         this.backRightDrive = backRightDrive;
         this.imu = imu;
     };
-    public void IMUOn(double currentTime) {
+    public void IMUOn(double currentTime, double X, double Y, double imuAngle) {
         // --- Improved align logic with P+D controller and braking ---
-        Pose p = follower.getPose();
-        double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
         if (isBlue) {
-            imuAlignAngle = -Math.toDegrees(Math.atan2(138 - p.getY(), 8 - p.getX()));
+            imuAlignAngle = Math.toDegrees(Math.atan2(138 - Y, 136 - X));
         } else {
-            imuAlignAngle = -Math.toDegrees(Math.atan2(138 - p.getY(), 136 - p.getX()));
+            imuAlignAngle = Math.toDegrees(Math.atan2(138 - Y, 8 - X));
         }
-        imuAlignAngle = imuAlignAngle + 90;
+        //imuAlignAngle = imuAlignAngle + 90;
         double error = imuAlignAngle - imuAngle;
         // Derivative calculation for braking (damping)
         double deltaTime = currentTime - lastImuTime;
@@ -99,7 +97,7 @@ public class IMUAlign {
         return turnPower;
     }
     public double IMUTarget(double X, double Y) {
-        return ConstantLock * Math.sqrt((X * X) + ((144-Y) * (144-Y)));
+        return Math.pow(ConstantLock * Math.sqrt((X * X) + ((144-Y) * (144-Y))),2);
     }
     public void IMUOff(){
         turnPower = 0;
