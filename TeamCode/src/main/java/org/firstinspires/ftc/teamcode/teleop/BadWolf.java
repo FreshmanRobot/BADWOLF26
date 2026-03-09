@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.LED;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -19,6 +20,7 @@ import org.firstinspires.ftc.teamcode.subsystems.GateController;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.subsystems.IMUAlign;
+import org.firstinspires.ftc.teamcode.subsystems.LedController;
 
 import com.pedropathing.geometry.Pose;
 
@@ -26,6 +28,7 @@ import com.pedropathing.geometry.Pose;
 public class BadWolf extends LinearOpMode {
 
     private DcMotor frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive;
+    private LED backLedR, backLedG, sideLedR, sideLedG;
     private DcMotorEx shooterEx;
     private DcMotor shooter2, intakeMotor;
     private Servo clawServo = null;
@@ -96,6 +99,11 @@ public class BadWolf extends LinearOpMode {
         frontRightDrive = hardwareMap.get(DcMotor.class, "frontRight");
         backRightDrive = hardwareMap.get(DcMotor.class, "backRight");
 
+        backLedR = hardwareMap.get(LED.class, "backLedR");
+        backLedG = hardwareMap.get(LED.class, "backLedG");
+        sideLedR = hardwareMap.get(LED.class, "sideLedR");
+        sideLedG = hardwareMap.get(LED.class, "sideLedG");
+
         shooterEx = hardwareMap.get(DcMotorEx.class, "shooter");
         shooter2 = hardwareMap.get(DcMotor.class, "shooter2");
 
@@ -116,11 +124,12 @@ public class BadWolf extends LinearOpMode {
         GateController gateController;
         ClawController clawController;
         IMUAlign IMUAlign;
+        LedController ledController;
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-        targetRPM = 3300;
+        targetRPM = 3100;
         clawServo.setPosition(0.0);
         leftHoodServo.setPosition(leftHoodPosition);
 //claw control
@@ -141,6 +150,7 @@ public class BadWolf extends LinearOpMode {
         backRightDrive,
         imu
         );
+        ledController = new LedController(backLedR, backLedG, sideLedR, sideLedG);
 //gate control
         gateController.setGateClosed(false);
         gateServo.setPosition(GATE_CLOSED);
@@ -186,18 +196,19 @@ public class BadWolf extends LinearOpMode {
             follower.update();
             long nowMs = System.currentTimeMillis();
 
+            ledController.ledState(gateController.gateClosed);
+
             // ---------- Relocalize (A) - reference heading store/restore --------------
             boolean aNow = gamepad1.a || gamepad2.a;
             if (aNow && !aPressedLast && imu != null) {
                 //double Theta = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
                 if (!isBlue) {
                     isBlue = true;
-                    follower.setPose(new Pose(40, 128, Math.toRadians(0)));
-                    imu.resetYaw();
+                    follower.setPose(new Pose(20, 122, Math.toRadians(135)));
                 }
                 else {
                     isBlue = false;
-                    follower.setPose(new Pose(40, 128, Math.toRadians(180)).mirror());
+                    follower.setPose(new Pose(20, 122, Math.toRadians(135)).mirror());
                 }
             }
             aPressedLast = aNow;
@@ -211,7 +222,7 @@ public class BadWolf extends LinearOpMode {
                     double currentTime = alignTimer.seconds();
                     Pose p = follower.getPose();
                     double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
-                    IMUAlign.IMUOn(currentTime, p.getX(), p.getY(), imuAngle);
+                    IMUAlign.IMUOn(currentTime, p.getX(), p.getY(), imuAngle, isBlue);
                 }
                 else {
                     xImuAlignActive = false;
@@ -249,8 +260,7 @@ public class BadWolf extends LinearOpMode {
 
             boolean rightBumperNow = gamepad1.right_bumper || gamepad2.right_bumper;
             if (rightBumperNow && !rightBumperLast) {
-
-                //imu.resetYaw();
+                imu.resetYaw();
             }
             rightBumperLast = rightBumperNow;
 
@@ -326,7 +336,7 @@ public class BadWolf extends LinearOpMode {
                 Pose p = follower.getPose();
                 double currentTime = alignTimer.seconds();
                 double imuAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
-                IMUAlign.IMUOn(currentTime, p.getX(), p.getY(), imuAngle);
+                IMUAlign.IMUOn(currentTime, p.getX(), p.getY(), imuAngle, isBlue);
                 flywheel.setTargetRpm(IMUAlign.IMUTarget(p.getX(), p.getY()));
             }
             else {

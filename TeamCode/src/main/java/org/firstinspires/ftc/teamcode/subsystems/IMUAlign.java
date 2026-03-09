@@ -49,7 +49,7 @@ public class IMUAlign {
         this.backRightDrive = backRightDrive;
         this.imu = imu;
     };
-    public void IMUOn(double currentTime, double X, double Y, double imuAngle) {
+    public void IMUOn(double currentTime, double X, double Y, double imuAngle, boolean isBlue) {
         // --- Improved align logic with P+D controller and braking ---
         if (isBlue) {
             imuAlignAngle = Math.toDegrees(Math.atan2(138 - Y, 136 - X));
