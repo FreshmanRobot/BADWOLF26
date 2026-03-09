@@ -662,7 +662,7 @@ public class BWBlueAuto extends OpMode {
 
             ShootToStart = follower
                     .pathBuilder()
-                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(40.000, 128.000)))
+                    .addPath(new BezierLine(new Pose(SHOOT_POSE_X_10, SHOOT_POSE_Y_10), new Pose(32.000, 135.000)))
                     .setLinearHeadingInterpolation(SHOOT_HEADING_RAD_10, Math.toRadians(0))
                     .build();
 
