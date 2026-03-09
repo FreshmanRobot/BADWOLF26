@@ -30,10 +30,10 @@ public class FlywheelController {
     @Sorter(sort = 2) public static double RPM_SWITCH_THRESHOLD = 3500.0;
 
     // --- CLOSE PIDF coefficients (for target RPM below threshold) ---
-    @Sorter(sort = 3) public static double CLOSE_kP = 0.0022;
+    @Sorter(sort = 3) public static double CLOSE_kP = 0.0021;
     @Sorter(sort = 4) public static double CLOSE_kI = 0.0016;
     @Sorter(sort = 5) public static double CLOSE_kD = 0.000005;
-    @Sorter(sort = 6) public static double CLOSE_kF = 1.85;
+    @Sorter(sort = 6) public static double CLOSE_kF = 1.73;
     @Sorter(sort = 7) public static double CLOSE_integralLimit = 50;
     @Sorter(sort = 8) public static double CLOSE_derivativeAlpha = 0.9;
     @Sorter(sort = 9) public static double CLOSE_rpmFilterAlpha = 0.72;
