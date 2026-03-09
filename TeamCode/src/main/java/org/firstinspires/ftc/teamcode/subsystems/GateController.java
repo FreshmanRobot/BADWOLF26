@@ -3,11 +3,13 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.LED;
 
 public class GateController {
 
     private final Servo gateServo;
     private final DcMotor intakeMotor;
+    private LED backLedR, backLedG, sideLedR, sideLedG;
 
     private final double gateOpenPos;
     private final double gateClosedPos;
@@ -41,6 +43,7 @@ public class GateController {
     public void setGateClosed(boolean closed) {
         gateClosed = closed;
         gateServo.setPosition(closed ? gateClosedPos : gateOpenPos);
+
     }
 
     public void toggleGate() {
